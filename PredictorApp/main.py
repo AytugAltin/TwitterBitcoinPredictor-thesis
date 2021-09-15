@@ -1,4 +1,5 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from BotClassifier import BotClassifier
 
 
 def sentiment_scores(sentence):
@@ -16,19 +17,35 @@ def sentiment_scores(sentence):
     # decide sentiment as positive, negative and neutral
     if sentiment_dict['compound'] >= 0.05:
         print("Positive")
-
     elif sentiment_dict['compound'] <= - 0.05:
         print("Negative")
-
     else:
         print("Neutral")
 
-
-if __name__ == '__main__':
+def sentiment_testing():
     sentences = [
         "This was a not good movie.",
-
-        ]
+    ]
     for sentence in sentences:
         sentiment_scores(sentence)
         print("")
+
+def bot_testing():
+    bot_clsfr = BotClassifier()
+
+    print(bot_clsfr.tweet_is_bot("start trading bitcoin"))
+
+
+def create_dataset():
+
+
+if __name__ == '__main__':
+    #sentiment_testing()
+
+    #bot_testing()
+
+    create_dataset()
+
+
+
+

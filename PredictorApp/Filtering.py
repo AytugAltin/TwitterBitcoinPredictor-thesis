@@ -6,7 +6,10 @@ import nltk
 import string
 from nltk.corpus import stopwords
 import regex as re
-import TweetBert
+from TweetBert import TweetBert
+from BotClassifier import BotClassifier
+from Vader import Vader
+import numpy
 
 
 class FilterMechanism:
@@ -14,6 +17,14 @@ class FilterMechanism:
     def __init__(self):
         nltk.download('stopwords')
         self.tweet_bert = TweetBert()
+        self.bot_classifier = BotClassifier()
+        self.Vader = Vader()
+
+    def pre_processing(self,tweet):
+        tweet = tweet.replace('\n', '')
+        tweet = tweet.replace('\t', '')
+        tweet = tweet.replace('\r', '')
+        return tweet
 
     def process(self, tweet):
         # Convert to lower case
@@ -38,7 +49,7 @@ class FilterMechanism:
         for punctuation in string.punctuation:
             text = text.replace(punctuation, ' ')
 
-            # words only
+        # words only
         text = ''.join([i for i in text if not i.isdigit()])
 
         # tokenize
@@ -80,27 +91,44 @@ class FilterMechanism:
         return ' '.join([contractions.fix(word) for word in text.split()])
 
     def filter_pipeline(self, index, row, data_set):
-        text = row["text"]
-        vec = self.tweet_bert.tweet_to_vec(text)
+        tweet = row["text"]
+
+        tweet = self.pre_processing(tweet)
+
+        vec = self.tweet_bert.tweet_to_vec_string(tweet)
         data_set._set_value(index, 'bert', vec)
 
-        text = self.normalize_text(text)
-        text = self.remove_contractions(text)
+        tweet = self.normalize_text(tweet)
+        tweet = self.remove_contractions(tweet)
 
-        tags = self.find_tags(text)
+        tags = self.find_tags(tweet)
         data_set._set_value(index, 'tags', tags)
 
-        promote = self.find_promote(text)
+        promote = self.find_promote(tweet)
         data_set._set_value(index, 'promote', promote)
 
-        text = self.process(text)
-        data_set._set_value(index, 'filtered_text', text)
+        tweet = self.process(tweet)
+        data_set._set_value(index, 'filtered_text', tweet)
+
+        if self.bot_classifier.tweet_is_bot(tweet):
+            data_set._set_value(index, 'bot', True)
+        else:
+            data_set._set_value(index, 'bot', False)
+
+        sentiment = self.Vader.get_score(tweet)
+        data_set._set_value(index, 'sent_neg', sentiment["neg"])
+        data_set._set_value(index, 'sent_neu', sentiment["neu"])
+        data_set._set_value(index, 'sent_pos', sentiment["pos"])
+        data_set._set_value(index, 'sent_compound', sentiment["compound"])
 
 
 if __name__ == '__main__':
 
     filer_mechanism = FilterMechanism()
-    sets = ["16_en", "17_en", "18_en", "19_en"]
+    sets = [
+        #"16_en","17_en",
+        "18_en", "19_en"
+            ]
 
     for setName in sets:
         data = pd.read_csv("data/TweetsBTC_16mil/english/" + setName + ".csv", lineterminator='\n')
@@ -114,8 +142,8 @@ if __name__ == '__main__':
                 print(err)
 
             except Exception as err:
-                print(err)
                 print(row["text"])
+                raise err
 
         print(setName, "done")
 
