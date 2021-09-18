@@ -6,7 +6,7 @@ from Datasets import *
 
 
 
-dataset = DatasetBitcoin("data/TweetsBTC_16mil/filtered/16_en_filtered.csv")
+dataset = DatasetBtcTweets("data/TweetsBTC_16mil/filtered/16_en_filtered.csv")
 
 for data in dataset:
     print(data)

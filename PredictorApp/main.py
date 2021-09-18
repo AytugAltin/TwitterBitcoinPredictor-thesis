@@ -1,9 +1,10 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from BotClassifier import BotClassifier
+from Datasets import DatasetCreator
 
 
 def sentiment_scores(sentence):
-    print("--", sentence,"--")
+    print("--", sentence, "--")
     sid_obj = SentimentIntensityAnalyzer()
     sentiment_dict = sid_obj.polarity_scores(sentence)
 
@@ -22,6 +23,7 @@ def sentiment_scores(sentence):
     else:
         print("Neutral")
 
+
 def sentiment_testing():
     sentences = [
         "This was a not good movie.",
@@ -30,6 +32,7 @@ def sentiment_testing():
         sentiment_scores(sentence)
         print("")
 
+
 def bot_testing():
     bot_clsfr = BotClassifier()
 
@@ -37,15 +40,19 @@ def bot_testing():
 
 
 def create_dataset():
+    dataset_creator = \
+        DatasetCreator(
+            tweets_path="data/TweetsBTC_16mil/filtered/16_en_filtered.csv",
+            volume_path="data/TweetsBTC_16mil/peryear/16.csv",
+            bitcoin_path="data/bitcoin/gemini_BTCUSD_2017_1min.csv",
+            time_interval="30Min"
+        )
+    print()
 
 
 if __name__ == '__main__':
-    #sentiment_testing()
+    # sentiment_testing()
 
-    #bot_testing()
+    # bot_testing()
 
     create_dataset()
-
-
-
-

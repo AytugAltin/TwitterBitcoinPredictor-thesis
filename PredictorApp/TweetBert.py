@@ -10,7 +10,7 @@ class TweetBert:
 
     def tweet_to_vec_string(self, tweet):
         vec = self.tweet_to_vec(tweet)
-        return str(torch.flatten(vec).tolist())
+        return torch.flatten(vec).tolist()
 
     def tweet_to_vec(self, tweet):
         line = normalizeTweet(tweet)

@@ -126,13 +126,16 @@ if __name__ == '__main__':
 
     filer_mechanism = FilterMechanism()
     sets = [
-        #"16_en","17_en",
+        "16_en",
+        "17_en",
         "18_en", "19_en"
             ]
 
     for setName in sets:
         data = pd.read_csv("data/TweetsBTC_16mil/english/" + setName + ".csv", lineterminator='\n')
         data.dropna(how='any', inplace=True)
+
+        data["bert"] = [[]] * len(data)
 
         for index, row in data.iterrows():
             try:
