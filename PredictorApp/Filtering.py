@@ -88,6 +88,7 @@ class FilterMechanism:
         return unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8")
 
     def remove_contractions(self, text):
+        # can't -> can not
         return ' '.join([contractions.fix(word) for word in text.split()])
 
     def filter_pipeline(self, index, row, data_set):
@@ -125,29 +126,23 @@ class FilterMechanism:
 if __name__ == '__main__':
 
     filer_mechanism = FilterMechanism()
-    sets = [
-        "16_en",
-        "17_en",
-        "18_en", "19_en"
-            ]
 
-    for setName in sets:
-        data = pd.read_csv("data/TweetsBTC_16mil/english/" + setName + ".csv", lineterminator='\n')
-        data.dropna(how='any', inplace=True)
+    data = pd.read_csv("data/2021/Bitcoin_tweets_en.csv", lineterminator='\n')
+    data.dropna(how='any', inplace=True)
 
-        data["bert"] = [[]] * len(data)
+    data["bert"] = [[]] * len(data)
 
-        for index, row in data.iterrows():
-            try:
-                filer_mechanism.filter_pipeline(index, row, data)
+    for index, row in data.iterrows():
+        try:
+            filer_mechanism.filter_pipeline(index, row, data)
 
-            except IndexError as err:
-                print(err)
+        except IndexError as err:
+            print(err)
 
-            except Exception as err:
-                print(row["text"])
-                raise err
+        except Exception as err:
+            print(row["text"])
+            raise err
 
-        print(setName, "done")
+    print("done")
 
-        data.to_csv(path_or_buf="data/TweetsBTC_16mil/filtered/" + setName + "_filtered.csv")
+    data.to_csv(path_or_buf="data/2021/Bitcoin_tweets_en_filtered.csv")
