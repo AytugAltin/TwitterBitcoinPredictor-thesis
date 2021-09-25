@@ -23,7 +23,6 @@ def meanlist(listoflists):
 class DatasetBtcTweets(Dataset):
     def __init__(self, tweets_data, bitcoin_data, volume_data, time_interval, bot_filtering=True,
                  transform=None):
-        self.data = pd.DataFrame()
         self.time_interval = time_interval
         self.tweets_volume = self.create_volumedata(volume_data)
         print("Loaded tweets volume")
@@ -32,15 +31,15 @@ class DatasetBtcTweets(Dataset):
         self.tweets_data = self.create_tweetsdata(tweets_data, bot_filtering)
         print("Loaded tweets data")
 
-
     def __len__(self):
         return self.data
 
     def __getitem__(self, index):
-        image = self.data.iloc[index, 1:]
-        label = self.data.iloc[index, 0]
+        tweet_data = self.tweets_data.iloc[index, :]
+        volume = self.tweets_volume.iloc[index, :]
+        bitcoin_data = self.bitoin_data.iloc[index, :]
 
-        return image, label
+        return tweet_data, volume, bitcoin_data
 
     def create_tweetsdata(self, tweets, bot_filtering):
         data = tweets

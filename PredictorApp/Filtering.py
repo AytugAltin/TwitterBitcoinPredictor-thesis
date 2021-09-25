@@ -20,7 +20,7 @@ class FilterMechanism:
         self.bot_classifier = BotClassifier()
         self.Vader = Vader()
 
-    def pre_processing(self,tweet):
+    def pre_processing(self, tweet):
         tweet = tweet.replace('\n', '')
         tweet = tweet.replace('\t', '')
         tweet = tweet.replace('\r', '')
@@ -85,6 +85,7 @@ class FilterMechanism:
             return promoting
 
     def normalize_text(self, text):
+        # remove non english alphabet letters
         return unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode("utf-8")
 
     def remove_contractions(self, text):

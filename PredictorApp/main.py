@@ -3,9 +3,11 @@ import datetime
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from BotClassifier import BotClassifier
-from Dataset import  DatasetBtcTweets
+from Dataset import DatasetBtcTweets
 from Keys import BEARER_TOKEN
 from TweetScraper import TweetScraper
+import os
+from os.path import isfile, join
 
 
 def sentiment_scores(sentence):
@@ -44,7 +46,38 @@ def bot_testing():
     print(bot_clsfr.tweet_is_bot("start trading bitcoin"))
 
 
-def create_dataset(start_date, end_date):
+def create_dataset_mix():
+    start_date = datetime.datetime(2017, 1, 1, 0, 0, 0, 0, datetime.timezone.utc)
+    end_date = datetime.datetime(2019, 1, 27, 23, 0, 0, 0, datetime.timezone.utc)
+
+    filelist = []
+    root_path = "data/mix/Raw/18/"
+
+    for roots, dirs, files in os.walk(root_path):
+        for file in files:
+            filelist.append(os.path.join(roots, file))
+
+    tweets_data = pd.DataFrame()
+    for file_path in filelist:
+        temp = pd.read_csv(file_path, sep=";", error_bad_lines=False)
+
+        tweets_data = tweets_data.append(temp)
+
+        print("Loaded", file_path, " ", temp.shape)
+
+    tweets_data.to_csv(root_path + "full.csv")
+
+    print("Shape ", tweets_data.shape)
+    #11573368
+    #11 573 687
+
+    print("done")
+
+
+def create_dataset_16m():
+    start_date = datetime.datetime(2017, 1, 1, 0, 0, 0, 0, datetime.timezone.utc)
+    end_date = datetime.datetime(2019, 1, 27, 23, 0, 0, 0, datetime.timezone.utc)
+
     tweets_data = pd.read_csv("data/TweetsBTC_16mil/filtered/17_en_filtered.csv", lineterminator='\n')
     tweets_data["date"] = tweets_data["timestamp"]
     tweets_data = tweets_data.sort_values(by='date')
@@ -97,17 +130,17 @@ def create_dataset(start_date, end_date):
 
     bitcoin_data['Date'] = pd.to_datetime(bitcoin_data['Date'])
 
-    bitcoin_data = bitcoin_data.loc[(bitcoin_data['Date'] >= start_date)
-                                  & (bitcoin_data['Date'] < end_date)]
+    bitcoin_data = bitcoin_data.loc[(bitcoin_data['Date'] >= start_date.replace(tzinfo=None))
+                                    & (bitcoin_data['Date'] < end_date.replace(tzinfo=None))]
 
-    dataset_creator = \
+    dataset = \
         DatasetBtcTweets(
             tweets_data=tweets_data,
             volume_data=volume_data,
             bitcoin_data=bitcoin_data,
             time_interval="60Min"
         )
-    dataset_creator.print_status()
+    return dataset
 
 
 def scrape_tweets():
@@ -124,7 +157,6 @@ def scrape_tweets():
 if __name__ == '__main__':
     # sentiment_testing()
     # bot_testing()
-    create_dataset(start_date=datetime.datetime(2017, 1, 1, 0, 0, 0, 0, datetime.timezone.utc),
-                   end_date=datetime.datetime(2019, 3, 28, 0, 0, 0, 0, datetime.timezone.utc)
-                   )
+    # set = create_dataset_16m()
+    create_dataset_mix()
     # scrape_tweets()
