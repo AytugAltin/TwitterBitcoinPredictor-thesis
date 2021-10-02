@@ -12,7 +12,7 @@ from Vader import Vader
 import numpy
 
 
-class FilterMechanism:
+class ClassificationMechanism:
 
     def __init__(self):
         nltk.download('stopwords')
@@ -92,7 +92,7 @@ class FilterMechanism:
         # can't -> can not
         return ' '.join([contractions.fix(word) for word in text.split()])
 
-    def filter_pipeline(self, index, row, data_set):
+    def pipeline(self, index, row, data_set):
         tweet = row["text"]
 
         tweet = self.pre_processing(tweet)
@@ -104,7 +104,7 @@ class FilterMechanism:
         tweet = self.remove_contractions(tweet)
 
         tags = self.find_tags(tweet)
-        data_set._set_value(index, 'tags', tags)
+        data_set._set_value(index, 'tags', numpy.array(tags, dtype=object))
 
         promote = self.find_promote(tweet)
         data_set._set_value(index, 'promote', promote)
@@ -126,16 +126,22 @@ class FilterMechanism:
 
 if __name__ == '__main__':
 
-    filer_mechanism = FilterMechanism()
+    mechanism = ClassificationMechanism()
 
-    data = pd.read_csv("data/2021/Bitcoin_tweets_en.csv", lineterminator='\n')
+    file_name = "data/mix/Per Period/2018(03-08--03-11)_en"
+    file_path = file_name + ".csv"
+    try:
+        data = pd.read_csv(file_path, sep=";")
+    except:
+        data = pd.read_csv(file_path, lineterminator="\n")
+
     data.dropna(how='any', inplace=True)
-
     data["bert"] = [[]] * len(data)
 
     for index, row in data.iterrows():
+
         try:
-            filer_mechanism.filter_pipeline(index, row, data)
+            mechanism.pipeline(index, row, data)
 
         except IndexError as err:
             print(err)
@@ -146,4 +152,4 @@ if __name__ == '__main__':
 
     print("done")
 
-    data.to_csv(path_or_buf="data/2021/Bitcoin_tweets_en_filtered.csv")
+    data.to_csv(path_or_buf=file_name+"_filtered.csv")

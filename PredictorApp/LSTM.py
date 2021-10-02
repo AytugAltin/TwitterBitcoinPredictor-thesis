@@ -3,10 +3,17 @@ from torch.utils.data import Dataset
 from torchvision import datasets
 import pandas as pd
 from Dataset import *
+import pickle
+
+som = DatasetBtcTweets()
+fileObject = "path"
+pickle.dump(som, fileObject)
+#...
+som = pickle.load(fileObject)
+som.work()
 
 
 
-dataset = DatasetBtcTweets("data/TweetsBTC_16mil/filtered/16_en_filtered.csv")
 
 for data in dataset:
     print(data)

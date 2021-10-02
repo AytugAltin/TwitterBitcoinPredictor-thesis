@@ -20,6 +20,18 @@ def meanlist(listoflists):
         return []
 
 
+def convert_to_datetime(data_frame, key):
+    try:
+        data_frame[key] = pd.to_datetime(data_frame[key], format='%d/%m/%Y %H:%M:%S', utc=True)
+    except:
+        try:
+            data_frame[key] = pd.to_datetime(data_frame[key], format='%d/%m/%Y %H:%M', utc=True)
+        except:
+            data_frame[key] = pd.to_datetime(data_frame[key], format='%Y-%m-%d %H:%M:%S', utc=True)
+
+    return data_frame
+
+
 class DatasetBtcTweets(Dataset):
     def __init__(self, tweets_data, bitcoin_data, volume_data, time_interval, bot_filtering=True,
                  transform=None):
@@ -49,9 +61,14 @@ class DatasetBtcTweets(Dataset):
 
         data = data[data.bot != bot_filtering][["date", "bert", "sent_neg", "sent_neu", "sent_pos"]]
 
-        data['date'] = pd.to_datetime(data['date'])
+        data = convert_to_datetime(data, "date")
+        data['date'] = data["date"].dt.tz_localize(None)
         data = data.set_index("date")
-        data.index = pd.to_datetime(data.index)
+
+        # data['date'] = pd.to_datetime(data['date'])
+        # data = data.set_index("date")
+        # data.index = pd.to_datetime(data.index)
+
         aggregations = {
             'sent_neg': 'mean',
             'sent_neu': 'mean',
@@ -67,8 +84,12 @@ class DatasetBtcTweets(Dataset):
         data = data.sort_values(by='date')
         data = data[["date"]]
 
+        data = convert_to_datetime(data, "date")
+        data['date'] = data["date"].dt.tz_localize(None)
         data = data.set_index("date")
-        data.index = pd.to_datetime(data.index)
+
+        # data = data.set_index("date")
+        # data.index = pd.to_datetime(data.index)
 
         grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).size().reset_index(name='tweet_vol')
         return grouped_data

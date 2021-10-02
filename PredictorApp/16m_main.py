@@ -10,48 +10,9 @@ import os
 from os.path import isfile, join
 
 
-def sentiment_scores(sentence):
-    print("--", sentence, "--")
-    sid_obj = SentimentIntensityAnalyzer()
-    sentiment_dict = sid_obj.polarity_scores(sentence)
-
-    print("Overall sentiment dictionary is : ", sentiment_dict)
-    print("sentence was rated as ", sentiment_dict['neg'] * 100, "% Negative")
-    print("sentence was rated as ", sentiment_dict['neu'] * 100, "% Neutral")
-    print("sentence was rated as ", sentiment_dict['pos'] * 100, "% Positive")
-
-    print("Sentence Overall Rated As", end=" ")
-
-    # decide sentiment as positive, negative and neutral
-    if sentiment_dict['compound'] >= 0.05:
-        print("Positive")
-    elif sentiment_dict['compound'] <= - 0.05:
-        print("Negative")
-    else:
-        print("Neutral")
-
-
-def sentiment_testing():
-    sentences = [
-        "This was a not good movie.",
-    ]
-    for sentence in sentences:
-        sentiment_scores(sentence)
-        print("")
-
-
-def bot_testing():
-    bot_clsfr = BotClassifier()
-
-    print(bot_clsfr.tweet_is_bot("start trading bitcoin"))
-
-
-def create_dataset_mix():
-    start_date = datetime.datetime(2017, 1, 1, 0, 0, 0, 0, datetime.timezone.utc)
-    end_date = datetime.datetime(2019, 1, 27, 23, 0, 0, 0, datetime.timezone.utc)
-
+def preprocessing_mix():
     filelist = []
-    root_path = "data/mix/Raw/18/"
+    root_path = "data/mix/Raw/18/PART 2 complete"
 
     for roots, dirs, files in os.walk(root_path):
         for file in files:
@@ -65,13 +26,27 @@ def create_dataset_mix():
 
         print("Loaded", file_path, " ", temp.shape)
 
-    tweets_data.to_csv(root_path + "full.csv")
+    tweets_data.to_csv("data/mix/Per Period/" + "2018_part1.csv")
 
     print("Shape ", tweets_data.shape)
-    #11573368
-    #11 573 687
-
     print("done")
+
+
+def create_dataset_mix():
+    start_date = datetime.datetime(2017, 5, 31, 0, 0, 0, 0, datetime.timezone.utc)
+    end_date = datetime.datetime(2019, 6, 1, 23, 0, 0, 0, datetime.timezone.utc)
+
+    volume_data = pd.read_csv("data/mix/Per Period/2018_part1.csv")
+
+    volume_data = volume_data.sort_values(by='date')
+
+    dataset = \
+        DatasetBtcTweets(
+            tweets_data=volume_data,
+            volume_data=volume_data,
+            bitcoin_data=volume_data,
+            time_interval="60Min"
+        )
 
 
 def create_dataset_16m():
@@ -143,20 +118,5 @@ def create_dataset_16m():
     return dataset
 
 
-def scrape_tweets():
-    start_time = datetime.datetime(2021, 2, 5, 0, 0, 0, 0, datetime.timezone.utc)
-    end_time = datetime.datetime(2021, 2, 6, 0, 0, 0, 0, datetime.timezone.utc)
-
-    scraper = TweetScraper(BEARER_TOKEN)
-
-    data = scraper.get_tweets(start_time=start_time, end_time=end_time, tags="bitcoin OR btc")
-
-    data.to_csv(path_or_buf="data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv")
-
-
 if __name__ == '__main__':
-    # sentiment_testing()
-    # bot_testing()
-    # set = create_dataset_16m()
-    create_dataset_mix()
-    # scrape_tweets()
+    preprocessing_mix()

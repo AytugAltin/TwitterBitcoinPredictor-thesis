@@ -1,41 +1,57 @@
 import numpy as np
 import pandas as pd
 from time import time
-import pandas as pd
-import numpy as np
-import re
-import sys
-import csv
 
-import numpy as np
-import pandas as pd
-from time import time
-import pandas as pd
-import numpy as np
-import re
-import sys
 import csv
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from twython import Twython, TwythonError
+from Keys import *
+
 import BotClassifier
 
-# import ast
-# def meanlist(list):
-#     divider = len(list)
-#     summed = list.pop()
-#     while len(list) > 0:
-#         summed = [sum(item) for item in zip(summed, list.pop())]
-#
-#     mean = []
-#     for number in summed:
-#         mean.append(number / divider)
-#     return mean
+
+def sentiment_scores(sentence):
+    print("--", sentence, "--")
+    sid_obj = SentimentIntensityAnalyzer()
+    sentiment_dict = sid_obj.polarity_scores(sentence)
+
+    print("Overall sentiment dictionary is : ", sentiment_dict)
+    print("sentence was rated as ", sentiment_dict['neg'] * 100, "% Negative")
+    print("sentence was rated as ", sentiment_dict['neu'] * 100, "% Neutral")
+    print("sentence was rated as ", sentiment_dict['pos'] * 100, "% Positive")
+
+    print("Sentence Overall Rated As", end=" ")
+
+    # decide sentiment as positive, negative and neutral
+    if sentiment_dict['compound'] >= 0.05:
+        print("Positive")
+    elif sentiment_dict['compound'] <= - 0.05:
+        print("Negative")
+    else:
+        print("Neutral")
+
+
+def sentiment_testing():
+    sentences = [
+        "This was a not good movie.",
+    ]
+    for sentence in sentences:
+        sentiment_scores(sentence)
+        print("")
 
 
 if __name__ == '__main__':
-    data = pd.read_csv("data/2021/Bitcoin_tweets.csv")
-    data = data.sort_values(by='date')
-    data = data[["date"]]
+    app_key = API_KEY
+    app_secret = API_SECRET_KEY
+    oauth_token = ACCESS_TOKEN
+    oauth_token_secret = ACCESS_TOKEN_SECRET
 
-    data = data.set_index("date")
-    data.index = pd.to_datetime(data.index)
-    grouped = data.groupby(pd.Grouper(freq="60Min")).size().reset_index(name='tweet_vol')
-    data.head(30)
+    naughty_words = [" -RT"]
+    good_words = ["bitcoin", "btc"]
+    filter = " OR ".join(good_words)
+    blacklist = " -".join(naughty_words)
+    keywords = filter + blacklist
+
+    twitter = Twython(app_key, app_secret, oauth_token, oauth_token_secret)
+    search_results = twitter.search(q=keywords, count=100)
+    print('tes')
