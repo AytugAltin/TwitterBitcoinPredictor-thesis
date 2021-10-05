@@ -12,7 +12,7 @@ class TweetScraper:
         self.twarc = Twarc2(bearer_token=BEARER_TOKEN)
 
     def get_tweets(self, start_time, end_time, tags):
-        path = "data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv"
+        path = "raw_data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv"
         print("####Scraping to", path)
 
         search_results = self.twarc.search_all(query=tags, start_time=start_time, end_time=end_time,

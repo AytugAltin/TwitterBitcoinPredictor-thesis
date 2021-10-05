@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 from time import time
-
 import csv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from twython import Twython, TwythonError
+
 from Keys import *
-
+from BERTTweet import BERTTweet
 import BotClassifier
-
+import torch
+from transformers import AutoModel, AutoTokenizer
 
 def sentiment_scores(sentence):
     print("--", sentence, "--")
@@ -41,17 +41,17 @@ def sentiment_testing():
 
 
 if __name__ == '__main__':
-    app_key = API_KEY
-    app_secret = API_SECRET_KEY
-    oauth_token = ACCESS_TOKEN
-    oauth_token_secret = ACCESS_TOKEN_SECRET
+    strings = [
+        "added video playlist bitcoin march st still possible",
+        # [0, 8, 792, 11, 202, 9, 11, 5, 1171, 10, 6635, 144, 55026, 24, 1282, 14350, 1085, 12988, 21, 2]
+        "stormx allows travelers purchase first class airline tickets cryptocurrency bitcoin",
+        # [0, 34140, 777, 56155, 54101, 9, 14719, 847, 3784, 39937, 6025, 30, 40021, 15488, 67, 10, 2]
 
-    naughty_words = [" -RT"]
-    good_words = ["bitcoin", "btc"]
-    filter = " OR ".join(good_words)
-    blacklist = " -".join(naughty_words)
-    keywords = filter + blacklist
+        "Better crypto buy?? $ETH $DASH $DGD $XMR $LTC $NEO $BTG $ETC $QTUM $LUN $GVT $OMG $NANO $HSR $BNB $EOS $WAVES $VEN $SALT $ICX $ARK $STEEM $BQX $BCPT $WINGS $APPC $GTO $BLZ $XLM $ADA $RPX $TRX $XVG $AION $VEN #Binance $BTCUSD $ICX $ADA $XMR #BITCOIN $TRX $VEN $NEM $SRN $GVT",
+        # [0, 178, 149, 18746, 10, 28, 2],
+        ]
+    tweetbert = BERTTweet()
 
-    twitter = Twython(app_key, app_secret, oauth_token, oauth_token_secret)
-    search_results = twitter.search(q=keywords, count=100)
-    print('tes')
+    for string in strings:
+        print(string)
+        print(tweetbert.tweet_to_vec(string))

@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-file_path = "data/mix/Raw/18/PART 1/Feb 2018/2018-02-18.csv"
+file_path = "raw_data/mix/Raw/18/PART 1/Feb 2018/2018-02-18.csv"
 
 fields = ["date"]
 volume_data = pd.read_csv(file_path, sep=";", usecols=fields)

@@ -1,8 +1,4 @@
-from transformers import AutoTokenizer
-from TweetNormalizer import normalizeTweet
-import torch
 import nltk
-from nltk.tokenize import word_tokenize
 
 # from paper "Predicting Bitcoin price fluctuation with Twitter sentiment analysis"
 HASHTAGS = ["mpgvip", "freebitcoin", "livescore", "makeyourownlane", "footballcoin"]
@@ -14,7 +10,7 @@ TRIGRAMS = [("start", "trading", "bitcoin")]
 class BotClassifier:
 
     def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained("vinai/bertweet-base")
+        print()
 
     def tweet_is_bot(self, tweet):
         tweet = tweet.lower()

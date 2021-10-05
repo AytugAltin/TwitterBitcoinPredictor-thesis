@@ -6,7 +6,6 @@ import nltk
 import string
 from nltk.corpus import stopwords
 import regex as re
-from TweetBert import TweetBert
 from BotClassifier import BotClassifier
 from Vader import Vader
 import numpy
@@ -16,7 +15,6 @@ class ClassificationMechanism:
 
     def __init__(self):
         nltk.download('stopwords')
-        self.tweet_bert = TweetBert()
         self.bot_classifier = BotClassifier()
         self.Vader = Vader()
 
@@ -97,9 +95,6 @@ class ClassificationMechanism:
 
         tweet = self.pre_processing(tweet)
 
-        vec = self.tweet_bert.tweet_to_vec_string(tweet)
-        data_set._set_value(index, 'bert', vec)
-
         tweet = self.normalize_text(tweet)
         tweet = self.remove_contractions(tweet)
 
@@ -124,25 +119,15 @@ class ClassificationMechanism:
         data_set._set_value(index, 'sent_compound', sentiment["compound"])
 
 
-if __name__ == '__main__':
-
+def classify(data):
+    print("ClassificationMechanism started")
     mechanism = ClassificationMechanism()
 
-    file_name = "data/mix/Per Period/2018(03-08--03-11)_en"
-    file_path = file_name + ".csv"
-    try:
-        data = pd.read_csv(file_path, sep=";")
-    except:
-        data = pd.read_csv(file_path, lineterminator="\n")
-
     data.dropna(how='any', inplace=True)
-    data["bert"] = [[]] * len(data)
 
     for index, row in data.iterrows():
-
         try:
             mechanism.pipeline(index, row, data)
-
         except IndexError as err:
             print(err)
 
@@ -150,6 +135,9 @@ if __name__ == '__main__':
             print(row["text"])
             raise err
 
-    print("done")
+        if index % 100000 == 0:
+            print("index", index)
 
-    data.to_csv(path_or_buf=file_name+"_filtered.csv")
+    print("ClassificationMechanism done")
+
+    return data

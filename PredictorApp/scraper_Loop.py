@@ -17,14 +17,14 @@ def scrape_tweets():
 
     data = scraper.get_tweets(start_time=start_time, end_time=end_time, tags="bitcoin OR btc -is:retweet")
 
-    data.to_csv(path_or_buf="data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv")
+    data.to_csv(path_or_buf="raw_data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv")
 
 
 def scrape_tweets_mixfill(start_time, end_time):
     scraper = TweetScraper(BEARER_TOKEN)
     data = scraper.get_tweets(start_time=start_time, end_time=end_time, tags="bitcoin lang:en -is:retweet")
 
-    data.to_csv(path_or_buf="data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv")
+    data.to_csv(path_or_buf="raw_data/scraped/tweets_" + str(start_time.date()) + str(end_time.date()) + ".csv")
 
 
 if __name__ == '__main__':
