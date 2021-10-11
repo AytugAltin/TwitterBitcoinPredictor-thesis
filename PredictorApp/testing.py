@@ -1,14 +1,7 @@
-import numpy as np
-import pandas as pd
-from time import time
-import csv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from Keys import *
-from BERTTweet import BERTTweet
-import BotClassifier
-import torch
-from transformers import AutoModel, AutoTokenizer
+from DataProcessing.BERTTweet import BERTTweet
+
 
 def sentiment_scores(sentence):
     print("--", sentence, "--")

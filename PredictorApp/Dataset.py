@@ -9,13 +9,10 @@ import ast
 def meanlist(listoflists):
     divider = len(listoflists)
     try:
-        summed = listoflists.pop()
-        while len(listoflists) > 0:
-            summed = [sum(item) for item in zip(summed, listoflists.pop())]
-        mean = []
-        for number in summed:
-            mean.append(number / divider)
-        return mean
+        summed = listoflists[0]
+        for index in range(1, divider):
+            summed = [sum(item) for item in zip(summed, listoflists[index])]
+        return summed
     except:
         return []
 
@@ -32,16 +29,31 @@ def convert_to_datetime(data_frame, key):
     return data_frame
 
 
+def multiply_row_by_count(row, multiplyer):
+    row["sent_neg"] = row["sent_neg"] * multiplyer
+    row["sent_neu"] = row["sent_neu"] * multiplyer
+    row["sent_pos"] = row["sent_pos"] * multiplyer
+
+    try:
+        row["bert"] = list(map(float, list(row["bert"].strip('[]').split(','))))
+    except:
+        pass
+
+    row["bert"] = [element * multiplyer for element in row["bert"]]
+
+    return row
+
+
 class DatasetBtcTweets(Dataset):
     def __init__(self, tweets_data, bitcoin_data, volume_data, time_interval, bot_filtering=True,
                  transform=None):
         self.time_interval = time_interval
+        self.tweets_data = self.create_tweetsdata(tweets_data, bot_filtering)
+        print("Loaded tweets data")
         self.tweets_volume = self.create_volumedata(volume_data)
         print("Loaded tweets volume")
         self.bitoin_data = self.create_bitcoindata(bitcoin_data)
         print("Loaded bitcoin data")
-        self.tweets_data = self.create_tweetsdata(tweets_data, bot_filtering)
-        print("Loaded tweets data")
 
     def __len__(self):
         return self.data
@@ -55,27 +67,24 @@ class DatasetBtcTweets(Dataset):
 
     def create_tweetsdata(self, tweets, bot_filtering):
         data = tweets
-
         data = data.sort_values(by='date')
-        data = data[["date", "bert", "sent_neg", "sent_neu", "sent_pos", "bot"]]
-
-        data = data[data.bot != bot_filtering][["date", "bert", "sent_neg", "sent_neu", "sent_pos"]]
 
         data = convert_to_datetime(data, "date")
         data['date'] = data["date"].dt.tz_localize(None)
         data = data.set_index("date")
 
-        # data['date'] = pd.to_datetime(data['date'])
-        # data = data.set_index("date")
-        # data.index = pd.to_datetime(data.index)
+        data = data.apply(lambda row: multiply_row_by_count(row, row["count"]), axis=1)
 
         aggregations = {
-            'sent_neg': 'mean',
-            'sent_neu': 'mean',
-            'sent_pos': 'mean',
-            "bert": lambda x: meanlist([ast.literal_eval(y) for y in x.values])
+            'sent_neg': 'sum',
+            'sent_neu': 'sum',
+            'sent_pos': 'sum',
+            "bert": lambda x: meanlist(x.values),
+            "count": 'sum'
         }
         grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).agg(aggregations)
+
+        grouped_data = grouped_data.apply(lambda row: multiply_row_by_count(row, 1 / row["count"]), axis=1)
 
         return grouped_data
 
@@ -88,8 +97,6 @@ class DatasetBtcTweets(Dataset):
         data['date'] = data["date"].dt.tz_localize(None)
         data = data.set_index("date")
 
-        # data = data.set_index("date")
-        # data.index = pd.to_datetime(data.index)
 
         grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).size().reset_index(name='tweet_vol')
         return grouped_data

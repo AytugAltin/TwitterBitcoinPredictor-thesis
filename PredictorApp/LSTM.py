@@ -4,10 +4,10 @@ from torchvision import datasets
 import pandas as pd
 from Dataset import *
 import pickle
+import datetime
 
-with open('Data/DatasetBtcTweets/mix(60Min).pickle', 'rb') as handle:
+with open('Data/2018tweets/Objects/(60Min).pickle', 'rb') as handle:
     dataset = pickle.load(handle)
-
 
 for data in dataset:
     print(data)
