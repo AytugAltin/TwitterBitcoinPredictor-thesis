@@ -84,7 +84,7 @@ def vec_tweets():
     files = [
         "03 2018_en",
         "04 2018_en",
-        "05 2018_en",
+        # "05 2018_en",
         # "06 2018_en",
         # "07 2018_en","08 2018_en",
         # "09 2018_en",
@@ -150,13 +150,13 @@ def merge_files(files, endpath):
 
 def create_dataset_mix(time_interval="60Min"):
     print("create_dataset_mix()")
-    start_date = datetime.datetime(2018, 5, 1, 0, 0, 0, 0, datetime.timezone.utc)
+    start_date = datetime.datetime(2018, 3, 8, 0, 0, 0, 0, datetime.timezone.utc)
     end_date = datetime.datetime(2018, 11, 4, 0, 0, 0, 0, datetime.timezone.utc)
 
     print("reading tweets_data")
     filelist = [
-        # "03 2018_en10Min.csv",
-        # "04 2018_en10Min.csv,"
+        "03 2018_en10Min.csv",
+        "04 2018_en10Min.csv",
         "05 2018_en10Min.csv",
         "06 2018_en10Min.csv",
         "07 2018_en10Min.csv",
@@ -173,7 +173,7 @@ def create_dataset_mix(time_interval="60Min"):
         try:
             temp = pd.read_csv(root_path+file_path, lineterminator="\n")
         except:
-            temp = pd.read_csv(file_path+file_path, sep=";")
+            temp = pd.read_csv(root_path+file_path, sep=";")
 
         tweets_data = tweets_data.append(temp)
 
@@ -192,12 +192,6 @@ def create_dataset_mix(time_interval="60Min"):
     print("reading volume_data")
     volume_data = pd.read_csv("Data/2018tweets/2018(03-08--03-11).csv"
                               , lineterminator='\n')
-    volume_data['date'] = pd.to_datetime(volume_data['date'])
-    volume_data = volume_data.loc[(volume_data['date'] >= start_date.replace(tzinfo=None))
-                                    & (volume_data['date'] < end_date.replace(tzinfo=None))]
-
-
-
 
     print("creating DatasetBtcTweets")
     dataset = \
@@ -209,8 +203,8 @@ def create_dataset_mix(time_interval="60Min"):
         )
 
     print("Saving DatasetBtcTweets")
-    with open('Data/2018tweets/Objects/(' + time_interval + ').pickle', 'wb') as handle:
-        pickle.dump(dataset, handle)
+
+    dataset.data.to_csv('Data/2018tweets/Objects/(' + time_interval + ').csv')
 
     print("create_dataset_mix Done")
 
@@ -247,7 +241,8 @@ if __name__ == '__main__':
     # ], endpath="Data/2018tweets/bert/05 2018_en.csv")
 
     # pre_group_data(files=[
-    #     "05 2018_en"]
+    #     "03 2018_en",
+    #     "04 2018_en"]
     #     , time_interval="10Min")
 
     # pre_group_data(files=[
@@ -262,4 +257,5 @@ if __name__ == '__main__':
     #     "11 2018_en",
     # ]
     #     , time_interval="1Min")
-    create_dataset_mix(time_interval="600Min")
+
+    create_dataset_mix(time_interval="60Min")

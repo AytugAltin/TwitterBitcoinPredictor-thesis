@@ -1,9 +1,7 @@
-import torch
-from torch.utils.data import Dataset
-from torchvision import datasets
 import pandas as pd
-import numpy as np
-import ast
+import torch
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset
 
 
 def meanlist(listoflists):
@@ -44,7 +42,7 @@ def multiply_row_by_count(row, multiplyer):
     return row
 
 
-class DatasetBtcTweets(Dataset):
+class DatasetBtcTweets:
     def __init__(self, tweets_data, bitcoin_data, volume_data, time_interval, bot_filtering=True,
                  transform=None):
         self.time_interval = time_interval
@@ -52,18 +50,9 @@ class DatasetBtcTweets(Dataset):
         print("Loaded tweets data")
         self.tweets_volume = self.create_volumedata(volume_data)
         print("Loaded tweets volume")
-        self.bitoin_data = self.create_bitcoindata(bitcoin_data)
+        self.bitcoin_data = self.create_bitcoindata(bitcoin_data)
         print("Loaded bitcoin data")
-
-    def __len__(self):
-        return self.data
-
-    def __getitem__(self, index):
-        tweet_data = self.tweets_data.iloc[index, :]
-        volume = self.tweets_volume.iloc[index, :]
-        bitcoin_data = self.bitoin_data.iloc[index, :]
-
-        return tweet_data, volume, bitcoin_data
+        self.data = pd.concat([self.bitcoin_data, self.tweets_volume, self.tweets_data], axis=1)
 
     def create_tweetsdata(self, tweets, bot_filtering):
         data = tweets
@@ -97,8 +86,8 @@ class DatasetBtcTweets(Dataset):
         data['date'] = data["date"].dt.tz_localize(None)
         data = data.set_index("date")
 
-
         grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).size().reset_index(name='tweet_vol')
+        grouped_data = grouped_data.set_index("date")
         return grouped_data
 
     def create_bitcoindata(self, bitcoin_data):
@@ -121,3 +110,38 @@ class DatasetBtcTweets(Dataset):
 
     def print_status(self):
         self.tweets_data["bert"].count([])
+
+
+class CombinedDataset(Dataset):
+    def __init__(self, csv_file):
+        self.data = pd.read_csv(csv_file)
+
+        self.data = convert_to_datetime(self.data, "date")
+        self.data['date'] = self.data["date"].dt.tz_localize(None)
+        self.data = self.data.set_index("date")
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        sample = self.data.iloc[idx, 1:][self.input_features]
+        label = self.data.iloc[idx, 1:][self.output_features]
+
+        return sample, label
+
+
+def feature_label_split(df, target_col):
+    y = df[[target_col]]
+    X = df.drop(columns=[target_col])
+    return X, y
+
+
+def train_val_test_split(df, target_col, test_ratio):
+    val_ratio = test_ratio / (1 - test_ratio)
+    X, y = feature_label_split(df, target_col)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_ratio, shuffle=False)
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, shuffle=False)
+    return X_train, X_val, X_test, y_train, y_val, y_test
