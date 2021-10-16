@@ -130,3 +130,4 @@ dmypy.json
 multiTimeline.csv
 *.zip
 *.csv
+PredictorApp/Models/Saved/(hidden=128)(layer=5)(input=605)(dropout=0.6)(output=1)/model-3
