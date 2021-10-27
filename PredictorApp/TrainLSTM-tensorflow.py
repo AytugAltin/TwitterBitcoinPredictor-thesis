@@ -44,7 +44,6 @@ class Model:
         self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate).minimize(self.cost)
 
 
-
 def predict_future(future_count, df, dates, indices={}):
     date_ori = dates[:]
     cp_df = df.copy()
@@ -55,45 +54,46 @@ def predict_future(future_count, df, dates, indices={}):
     for k in range(0, (df.shape[0] // timestamp) * timestamp, timestamp):
         out_logits, last_state = sess.run(
             [modelnn.logits, modelnn.last_state],
-            feed_dict = {
+            feed_dict={
                 modelnn.X: np.expand_dims(
-                    cp_df.iloc[k : k + timestamp], axis = 0
+                    cp_df.iloc[k: k + timestamp], axis=0
                 ),
                 modelnn.hidden_layer: init_value,
             },
         )
         init_value = last_state
-        output_predict[k + 1 : k + timestamp + 1] = out_logits
+        output_predict[k + 1: k + timestamp + 1] = out_logits
     out_logits, last_state = sess.run(
         [modelnn.logits, modelnn.last_state],
-        feed_dict = {
-            modelnn.X: np.expand_dims(cp_df.iloc[upper_b:], axis = 0),
+        feed_dict={
+            modelnn.X: np.expand_dims(cp_df.iloc[upper_b:], axis=0),
             modelnn.hidden_layer: init_value,
         },
     )
     init_value = last_state
-    output_predict[upper_b + 1 : cp_df.shape[0] + 1] = out_logits
+    output_predict[upper_b + 1: cp_df.shape[0] + 1] = out_logits
     cp_df.loc[cp_df.shape[0]] = out_logits[-1]
-    date_ori.append(date_ori[-1] + timedelta(hours = 1))
+    date_ori.append(date_ori[-1] + timedelta(hours=1))
     if indices:
         for key, item in indices.items():
-            cp_df.iloc[-1,key] = item
+            cp_df.iloc[-1, key] = item
     for i in range(future_count - 1):
         out_logits, last_state = sess.run(
             [modelnn.logits, modelnn.last_state],
-            feed_dict = {
-                modelnn.X: np.expand_dims(cp_df.iloc[-timestamp:], axis = 0),
+            feed_dict={
+                modelnn.X: np.expand_dims(cp_df.iloc[-timestamp:], axis=0),
                 modelnn.hidden_layer: init_value,
             },
         )
         init_value = last_state
         output_predict[cp_df.shape[0], :] = out_logits[-1, :]
         cp_df.loc[cp_df.shape[0]] = out_logits[-1, :]
-        date_ori.append(date_ori[-1] + timedelta(hours = 1))
+        date_ori.append(date_ori[-1] + timedelta(hours=1))
         if indices:
             for key, item in indices.items():
-                cp_df.iloc[-1,key] = item
+                cp_df.iloc[-1, key] = item
     return {'date_ori': date_ori, 'df': cp_df.values}
+
 
 def anchor(signal, weight):
     buffer = []
@@ -103,6 +103,7 @@ def anchor(signal, weight):
         buffer.append(smoothed_val)
         last = smoothed_val
     return buffer
+
 
 if __name__ == '__main__':
     dataset = CombinedDataset(csv_file="Data/2018tweets/Objects/(60Min).csv",
@@ -130,7 +131,6 @@ if __name__ == '__main__':
     modelnn = Model(learning_rate, num_layers, df_scaled.shape[1], size_layer, dropout_rate)
     sess = tf.compat.v1.Session()
     sess.run(tf.compat.v1.global_variables_initializer())
-
 
     for i in range(epoch):
         init_value = np.zeros((1, num_layers * 2 * size_layer))

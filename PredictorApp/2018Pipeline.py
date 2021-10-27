@@ -155,25 +155,24 @@ def create_dataset_mix(time_interval="60Min"):
 
     print("reading tweets_data")
     filelist = [
-        "03 2018_en10Min.csv",
-        "04 2018_en10Min.csv",
-        "05 2018_en10Min.csv",
-        "06 2018_en10Min.csv",
-        "07 2018_en10Min.csv",
-        "08 2018_en10Min.csv",
-        "09 2018_en10Min.csv",
-        "10 2018_en10Min.csv",
-        "11 2018_en10Min.csv"
+        "03 2018_en1Min.csv",
+        "04 2018_en1Min.csv",
+        "05 2018_en1Min.csv",
+        "06 2018_en1Min.csv",
+        "07 2018_en1Min.csv",
+        "08 2018_en1Min.csv",
+        "09 2018_en1Min.csv",
+        "10 2018_en1Min.csv",
+        "11 2018_en1Min.csv"
     ]
-    root_path = "Data/2018tweets/grouped/10Min/"
-
+    root_path = "Data/2018tweets/grouped/1Min/"
 
     tweets_data = pd.DataFrame()
     for file_path in filelist:
         try:
-            temp = pd.read_csv(root_path+file_path, lineterminator="\n")
+            temp = pd.read_csv(root_path + file_path, lineterminator="\n")
         except:
-            temp = pd.read_csv(root_path+file_path, sep=";")
+            temp = pd.read_csv(root_path + file_path, sep=";")
 
         tweets_data = tweets_data.append(temp)
 
@@ -187,7 +186,6 @@ def create_dataset_mix(time_interval="60Min"):
     bitcoin_data['Date'] = pd.to_datetime(bitcoin_data['Date'])
     bitcoin_data = bitcoin_data.loc[(bitcoin_data['Date'] >= start_date.replace(tzinfo=None))
                                     & (bitcoin_data['Date'] < end_date.replace(tzinfo=None))]
-
 
     print("reading volume_data")
     volume_data = pd.read_csv("Data/2018tweets/2018(03-08--03-11).csv"
@@ -207,6 +205,7 @@ def create_dataset_mix(time_interval="60Min"):
     dataset.data.to_csv('Data/2018tweets/Objects/(' + time_interval + ').csv')
 
     print("create_dataset_mix Done")
+
 
 if __name__ == '__main__':
     # preprocessing_mix()

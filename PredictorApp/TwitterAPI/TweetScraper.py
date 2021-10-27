@@ -34,6 +34,7 @@ class TweetScraper:
 
             index = index + 1
         print("Saved To ", path)
+        print(index, " Final Shape", data_processed.shape)
         return data_processed
 
     def page_to_dataframe(self, page):

@@ -102,7 +102,7 @@ class DatasetBtcTweets:
             'High': 'max',
             'Low': 'min',
             "Close": lambda x: x.iloc[-1],
-            "Volume": 'mean'
+            "Volume": 'sum'
         }
 
         grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).agg(aggregations)
@@ -127,8 +127,8 @@ class CombinedDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        sample = self.data.iloc[idx, 1:][self.input_features]
-        label = self.data.iloc[idx, 1:][self.output_features]
+        sample = self.data.iloc[idx, 1:]
+        label = self.data.iloc[idx, 1:]
 
         return sample, label
 
