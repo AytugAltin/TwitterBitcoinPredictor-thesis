@@ -95,11 +95,11 @@ class ClassificationMechanism:
 
         tweet = self.pre_processing(tweet)
 
-        tweet = self.normalize_text(tweet)
+        # tweet = self.normalize_text(tweet)
         tweet = self.remove_contractions(tweet)
 
         tags = self.find_tags(tweet)
-        data_set._set_value(index, 'tags', numpy.array(tags, dtype=object))
+        data_set._set_value(index, 'tags', str(tags))
 
         promote = self.find_promote(tweet)
         data_set._set_value(index, 'promote', promote)

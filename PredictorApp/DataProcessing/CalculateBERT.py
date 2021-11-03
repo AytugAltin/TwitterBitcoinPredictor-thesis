@@ -21,6 +21,7 @@ class BERTCalculator:
         tweet = self.pre_processing(tweet)
 
         vec = self.tweet_bert.tweet_to_vec_string(tweet)
+        vec = [round(a, 5) for a in vec]
         data_set._set_value(index, 'bert', vec)
 
 

@@ -42,80 +42,49 @@ def multiply_row_by_count(row, multiplyer):
     return row
 
 
-class DatasetBtcTweets:
-    def __init__(self, tweets_data, bitcoin_data, volume_data, time_interval, bot_filtering=True,
-                 transform=None):
-        self.time_interval = time_interval
-        self.tweets_data = self.create_tweetsdata(tweets_data, bot_filtering)
-        print("Loaded tweets data")
-        self.tweets_volume = self.create_volumedata(volume_data)
-        print("Loaded tweets volume")
-        self.bitcoin_data = self.create_bitcoindata(bitcoin_data)
-        print("Loaded bitcoin data")
-        self.data = pd.concat([self.bitcoin_data, self.tweets_volume, self.tweets_data], axis=1)
+def create_tweetsdata(self, tweets, bot_filtering=True):
+    data = tweets
+    data = data.sort_values(by='date')
 
-    def create_tweetsdata(self, tweets, bot_filtering):
-        data = tweets
-        data = data.sort_values(by='date')
+    data = convert_to_datetime(data, "date")
+    data['date'] = data["date"].dt.tz_localize(None)
+    data = data.set_index("date")
 
-        data = convert_to_datetime(data, "date")
-        data['date'] = data["date"].dt.tz_localize(None)
-        data = data.set_index("date")
+    data = data.apply(lambda row: multiply_row_by_count(row, row["count"]), axis=1)
 
-        data = data.apply(lambda row: multiply_row_by_count(row, row["count"]), axis=1)
+    aggregations = {
+        'sent_neg': 'sum',
+        'sent_neu': 'sum',
+        'sent_pos': 'sum',
+        "bert": lambda x: meanlist(x.values),
+        "count": 'sum'
+    }
+    grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).agg(aggregations)
 
-        aggregations = {
-            'sent_neg': 'sum',
-            'sent_neu': 'sum',
-            'sent_pos': 'sum',
-            "bert": lambda x: meanlist(x.values),
-            "count": 'sum'
-        }
-        grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).agg(aggregations)
+    grouped_data = grouped_data.apply(lambda row: multiply_row_by_count(row, 1 / row["count"]), axis=1)
 
-        grouped_data = grouped_data.apply(lambda row: multiply_row_by_count(row, 1 / row["count"]), axis=1)
+    return grouped_data
 
-        return grouped_data
+def create_volumedata(self, volume_data):
+    data = volume_data
+    data = data.sort_values(by='date')
+    data = data[["date"]]
 
-    def create_volumedata(self, volume_data):
-        data = volume_data
-        data = data.sort_values(by='date')
-        data = data[["date"]]
+    data = convert_to_datetime(data, "date")
+    data['date'] = data["date"].dt.tz_localize(None)
+    data = data.set_index("date")
 
-        data = convert_to_datetime(data, "date")
-        data['date'] = data["date"].dt.tz_localize(None)
-        data = data.set_index("date")
-
-        grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).size().reset_index(name='tweet_vol')
-        grouped_data = grouped_data.set_index("date")
-        return grouped_data
-
-    def create_bitcoindata(self, bitcoin_data):
-        data = bitcoin_data
-        data = data.sort_values(by='Date')
-        data = data[["Date", "Open", "High", "Low", "Close", "Volume", "Volume USD"]]
-        data = data.set_index("Date")
-        data.index = pd.to_datetime(data.index)
-
-        aggregations = {
-            'Open': lambda x: x.iloc[0],
-            'High': 'max',
-            'Low': 'min',
-            "Close": lambda x: x.iloc[-1],
-            "Volume": 'sum'
-        }
-
-        grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).agg(aggregations)
-        return grouped_data
-
-    def print_status(self):
-        self.tweets_data["bert"].count([])
+    grouped_data = data.groupby(pd.Grouper(freq=self.time_interval)).size().reset_index(name='tweet_vol')
+    grouped_data = grouped_data.set_index("date")
+    return grouped_data
 
 
-class CombinedDataset(Dataset):
+def print_status(self):
+    self.tweets_data["bert"].count([])
+
+
+class DataSetReader(Dataset):
     def __init__(self, csv_file):
-        self.data = pd.read_csv(csv_file)
-
         self.data = convert_to_datetime(self.data, "date")
         self.data['date'] = self.data["date"].dt.tz_localize(None)
         self.data = self.data.set_index("date")
@@ -133,15 +102,3 @@ class CombinedDataset(Dataset):
         return sample, label
 
 
-def feature_label_split(df, target_col):
-    y = df[[target_col]]
-    X = df.drop(columns=[target_col])
-    return X, y
-
-
-def train_val_test_split(df, target_col, test_ratio):
-    val_ratio = test_ratio / (1 - test_ratio)
-    X, y = feature_label_split(df, target_col)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_ratio, shuffle=False)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, shuffle=False)
-    return X_train, X_val, X_test, y_train, y_val, y_test

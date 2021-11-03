@@ -22,7 +22,7 @@ class TweetScraper:
         for page in search_results:
             # data_raw = data_raw.append(self.page_to_dataframe(page))
             for tweet in ensure_flattened(page):
-                data_processed = data_processed.append(self.proces_tweet(tweet), ignore_index=True)
+                data_processed = data_processed.append(proces_tweet(tweet), ignore_index=True)
             if index % log == 0:
                 print(index, " Data_Shape", data_processed.shape)
                 print(data_processed.iloc[-1]["date"])
@@ -40,7 +40,9 @@ class TweetScraper:
     def page_to_dataframe(self, page):
         return pd.DataFrame(ensure_flattened(page))
 
-    def proces_tweet(self, tweet):
+
+def proces_tweet(tweet):
+    try:
         return {
             "text": tweet["text"],
             "date": tweet["created_at"],
@@ -64,3 +66,6 @@ class TweetScraper:
             'user_listed_count': tweet['author']['public_metrics']['listed_count'],
             'user_description': tweet['author']['description'],
         }
+    except:
+        return {"text": "text$"}
+
