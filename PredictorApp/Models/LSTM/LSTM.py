@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+
 from Device import DEVICE
 
 
 class LSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout):
-        super(LSTM,self).__init__()
+    def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout, batch_size):
+        super(LSTM, self).__init__()
 
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim,
                             dropout=dropout, num_layers=num_layers, batch_first=True)
@@ -20,6 +19,8 @@ class LSTM(nn.Module):
         self.layer_dim = num_layers
         self.num_layers = num_layers
         self.dropout = dropout
+        self.batch_size = batch_size
+
 
         name = ''
         name += "(hidden=" + str(hidden_dim) + ")"
@@ -27,19 +28,22 @@ class LSTM(nn.Module):
         name += "(input=" + str(input_dim) + ")"
         name += "(dropout=" + str(dropout) + ")"
         name += "(output=" + str(output_dim) + ")"
-
         self.name = name
 
+    def get_name(self):
+        return self.name
+
+    def reset_cell(self,batch_size):
+        self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE),
+                            torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE))
+
     def forward(self, input_tensor):
-        h_0 = torch.zeros(self.num_layers, input_tensor.size(0), self.hidden_dim)
-        h_0.to(DEVICE)
+        self.reset_cell(input_tensor.size(0))
+        out, (_) = self.lstm(input_tensor,self.hidden_cell)
 
-        c_0 = torch.zeros(self.num_layers, input_tensor.size(0), self.hidden_dim)
-        c_0.to(DEVICE)
+        out = out[:, -1, :]
+        out = out.to(DEVICE)
 
-        out, (h_n, c_n) = self.lstm(input_tensor, (h_0, c_0))
-
-        out = out[:, -1, :].to(DEVICE)
         output = self.fc(out)
 
         return output

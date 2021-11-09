@@ -20,6 +20,7 @@ def meanlist(listoflists):
 def sum_list(listoflists):
     listoflists= listoflists.values.tolist()
     try:
+        listoflists = [x for x in listoflists if not isinstance(x, str)]
         listoflists.remove("[]")
     except:
         pass

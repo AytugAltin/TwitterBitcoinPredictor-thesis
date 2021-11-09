@@ -1,9 +1,11 @@
 from pathlib import Path
 import numpy as np
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from Dataset import *
 from Device import DEVICE
 from Evaluate import evaluate_model, plot_predictions
+
+LOG_EPOCH = 10
+EVAL_EPOCH = 10
 
 
 class Trainer:
@@ -14,34 +16,31 @@ class Trainer:
         self.train_losses = []
         self.val_losses = []
         self.model_index = 0
-        self.best_model_score = -20
+        self.best_model_score = -2000
 
     def train_step(self, x, y):
-        # Sets model to train mode
-        self.model.train()
+        # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
 
-        # Makes predictions
-        yhat = self.model(x)
+        self.model.train()  # Sets model to train mode
+        y_hat = self.model(x)  # Makes predictions
+        loss = self.loss_fn(y, y_hat)  # Computes loss
 
-        # Computes loss
-        loss = self.loss_fn(y, yhat)
-
-        # Computes gradients
-        loss.backward()
+        loss.backward(retain_graph=True)  # Computes gradients
 
         # Updates parameters and zeroes gradients
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-        # Returns the loss
-        return loss.item()
+        return loss.item()  # Returns the loss
 
     def train(self, train_loader, val_loader, batch_size, n_epochs, n_features,
               test_loader_one, X_test, scaler):
 
         for epoch in range(1, n_epochs + 1):
-            # Forward
+            # Train for the whole epoch
             batch_losses = []
+
+            #Train
             for x_batch, y_batch in train_loader:
                 x_batch = x_batch.view([batch_size, -1, n_features]).to(DEVICE)
                 y_batch = y_batch.to(DEVICE)
@@ -50,7 +49,7 @@ class Trainer:
             training_loss = np.mean(batch_losses)
             self.train_losses.append(training_loss)
 
-            # Backward
+            # VALIDATION
             with torch.no_grad():
                 batch_val_losses = []
                 for x_val, y_val in val_loader:
@@ -63,16 +62,16 @@ class Trainer:
                 validation_loss = np.mean(batch_val_losses)
                 self.val_losses.append(validation_loss)
 
-            if (epoch <= 50) | (epoch % 10 == 0):
+            if (epoch <= 50) | (epoch % LOG_EPOCH == 0):
                 print(f"[{epoch}/{n_epochs}] "
                       f"Training loss: {training_loss:.4f}\t "
-                      f"Validation loss: {validation_loss:.4f}")
+                      # f"Validation loss: {validation_loss:.4f}"
+                      )
 
-            if epoch % 100 == 0:
+            if epoch % EVAL_EPOCH == 0:
                 self.evaluate(test_loader_one, batch_size=1, n_features=n_features, X_test=X_test, scaler=scaler)
 
     def evaluate(self, test_loader_one, batch_size, n_features, X_test, scaler):
-
         df_result, result_metrics = evaluate_model(model=self.model, test_loader=test_loader_one, batch_size=batch_size
                                                    , n_features=n_features, X_test=X_test, scaler=scaler)
 

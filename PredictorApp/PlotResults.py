@@ -8,7 +8,7 @@ from Models.LSTM import LSTMModel
 if __name__ == '__main__':
     dataset = CombinedDataset(csv_file="Data/2018tweets/Objects/(60Min).csv")
 
-    X_train, X_val, X_test, y_train, y_val, y_test = extract_features(dataset)
+    X_train, X_val, X_test, y_train, y_val, y_test = time_lag_features(dataset)
 
     scaler = MinMaxScaler()
     X_train_arr = scaler.fit_transform(X_train)
