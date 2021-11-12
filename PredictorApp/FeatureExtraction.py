@@ -4,8 +4,8 @@ import ast
 
 def feature_label_split(df, target_col):
     # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
-    y = df[[target_col]]
-    X = df.drop(columns=[target_col])
+    y = df[target_col]
+    X = df.drop(columns=target_col)
     return X, y
 
 
@@ -29,7 +29,7 @@ def generate_time_lag(df, n_lags, feature):
     # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
     df_n = df.copy()
     for n in range(1, n_lags + 1):
-        df_n[f"{feature +'_l'+ str(n)}"] = df_n[feature].shift(n)
+        df_n[f"{feature + '_l' + str(n)}"] = df_n[feature].shift(n)
     return df_n
 
 
@@ -39,11 +39,12 @@ def time_lag_features(df, features, N):
 
     return df_generated
 
-def create_bert_feature(df_bert,window_size):
+
+def create_bert_feature(df_bert, window_size):
     return 0
 
 
-def time_difference(df,tag):
+def time_difference(df, tag):
     df[tag] = df[tag].diff()
-    df.at[0,tag] = 0
+    df.at[df.index[0], tag] = 0
     return df

@@ -50,10 +50,7 @@ def calculate_metrics(df):
             'r2': r2_score(df.value, df.prediction)}
 
 
-def plot_predictions(model, test_loader, n_features, X_test, scaler):
-    df_result, result_metrics = evaluate_model(model=model, test_loader=test_loader, batch_size=1
-                                               , n_features=n_features, X_test=X_test, scaler=scaler)
-
+def plot_predictions(df_result):
     plt.close()
     df_result.plot(y=['value', 'prediction'])
     plt.show()

@@ -1,25 +1,22 @@
 import datetime
-import os
-
 import torch.optim as optim
 from sklearn.preprocessing import MinMaxScaler
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
-
-from DataProcessing.DataGrouper import group_tweetsdata, group_volumedata, group_bitcoindata
+from DataLoader import *
 from Device import DEVICE
-from FeatureExtraction import *
+from Models.Hybrid.CNNLSTM import CNNLSTM
 from Models.Hybrid.DenseLSTM import DenseLSTM
 from Models.LSTM.LSTM import LSTM
-from Models.Hybrid.CNNLSTM import CNNLSTM
-
 from Trainer import Trainer
 
 # region CONFIG
-TIME_INTERVAL = "3H"
+TIME_INTERVAL = "6H"
 BATCH_SIZE = 64
 BERT_ENABLE = False
 EPOCHS = 10000
+
+TIME_DIFFERENCE_ENABLE = False
 
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-6
@@ -37,134 +34,99 @@ FEATURES = [
     # 'sent_pos',
     'Close'
 ]
-TO_PREDICT_LABEL = "Close"
+TO_PREDICT_LABELS = ["Close"]
+
+TEST_RATIO = 0.05
+VAL_RATIO = 0.1
 
 
 # endregion
 
-# region Helpers
-def load_tweet_data(time_interval, files, renew=False):
-    print("READING TWEETS")
-    potential_path = "../Data/2018-Weighted/cache/" + "TWEETS" + "(" + time_interval + ")" + ".csv"
-
-    if os.path.isfile(potential_path) and not renew:
-        # Read CACHED FILE
-        print(" - Cached File Found")
-        df = pd.read_csv(potential_path)
-        print(" - LOADED", potential_path)
-        return df
-
-    print(" - NO Cached File Found")
-
-    root_path = "../Data/2018-Weighted/grouped/"
-    tweets_data = pd.DataFrame()
-    for file_path in files:
-        print("     - reading", file_path)
-        temp = pd.read_csv(root_path + file_path)
-        tweets_data = tweets_data.append(temp)
-
-    print(" - Grouping")
-    grouped_df = group_tweetsdata(tweets_data, time_interval)
-    print(" - Writing")
-    grouped_df.to_csv(potential_path)
-    print(" - Tweets Data Cached in", potential_path)
-
-    print(" - Fixing BERT Features")
-    final_df = fix_bert(potential_path)
-    print(" - BERT Features Fixed", potential_path)
-
-    print(" - Writing With BERT features")
-    final_df.to_csv(potential_path)
-
-    print(" ! Reading Tweets Data DONE...")
-    return final_df
+def time_differencing(df):
+    df = time_difference(df_raw, "Close")
+    return df
 
 
-def fix_bert(path):
-    bert = ""
-    for i in range(0, 768):
-        bert += ",bert" + str(i)
+def feature_extration(df_raw):
+    print("EXTRACTING FEATURES")
+    df_result = time_lag_features(df_raw, FEATURES, N=WINDOW_SIZE)
+    print("TIME LAGGING FEATURES DONE")
 
-    bert += ","
-    data = None
-    with open(path, 'r') as infile:
-        data = infile.read()
-        data = data.replace('"', '')
-        data = data.replace('[', '')
-        data = data.replace(']', '')
-        data = data.replace(',bert,', bert)
-        infile.close()
+    bert_vector = []
+    if BERT_ENABLE:
+        print("ADDING BERT FEATURES")
+        for i in range(0, BERT_SIZE):
+            bert_vector.append("bert" + str(i))
 
-    with open(path, 'w') as outfile:
-        outfile.write(data)
+        df_bert = df_raw[bert_vector]
+        df_bert = df_bert.iloc[WINDOW_SIZE:, :]  # Compensate the time lag
+        df_result = pd.concat([df_result, df_bert], axis=1)
 
-    grouped_df = pd.read_csv(path)
-    return grouped_df
+        # df_bert = create_bert_feature(df_bert,WINDOW_SIZE)
+
+    return df_result
 
 
-def load_volume_data(time_interval, start_date, end_date, renew=False):
-    print("READING VOLUME")
-    potential_path = "../Data/2018-Weighted/cache/" + "VOLUME" + "(" + time_interval + ")" + ".csv"
+def cross_validation_sets(df):
+    start_date = datetime.datetime(2018, 3, 8, 0, 0, 0, 0, datetime.timezone.utc)
 
-    if os.path.isfile(potential_path) and not renew:
-        # Read CACHED FILE
-        print(" - Cached File Found")
-        df = pd.read_csv(potential_path)
-        return df
-    print(" - Cached File NOT Found")
+    end_dates = [datetime.datetime(2018, 7, 1, 0, 0, 0, 0, datetime.timezone.utc),
+                 datetime.datetime(2018, 8, 1, 0, 0, 0, 0, datetime.timezone.utc),
+                 datetime.datetime(2018, 9, 1, 0, 0, 0, 0, datetime.timezone.utc),
+                 datetime.datetime(2018, 10, 1, 0, 0, 0, 0, datetime.timezone.utc),
+                 datetime.datetime(2018, 11, 4, 0, 0, 0, 0, datetime.timezone.utc),
+                 ]
 
-    file_path = "../Data/2018tweets/2018(03-08--03-11).csv"
-    print("     - reading", file_path)
-    volume_data = pd.read_csv(file_path)
+    df.index = pd.to_datetime(df.index)
+    end_date = end_dates.pop(0)
 
-    print(" - Grouping")
-    grouped_df = group_volumedata(volume_data, time_interval)
+    sets = []
+    while len(end_dates) > 0:
+        training_set = df.loc[(df.index >= start_date.replace(tzinfo=None))
+                              & (df.index < end_date.replace(tzinfo=None))]
 
-    print("     - Filtering Between", start_date.date(), "and", end_date.date())
-    grouped_df = grouped_df.loc[(grouped_df['date'] >= start_date.replace(tzinfo=None))
-                                & (grouped_df['date'] < end_date.replace(tzinfo=None))]
+        start_date_test = end_date
+        end_date = end_dates.pop(0)
 
-    print(" - Writing")
-    grouped_df.to_csv(potential_path)
-    print(" - Volume Data Cached in", potential_path)
+        test_set = df.loc[(df.index >= start_date_test.replace(tzinfo=None))
+                          & (df.index < end_date.replace(tzinfo=None))]
 
-    print(" ! Reading Volume Data DONE...")
-    return grouped_df
+        sets.append((training_set, test_set))
 
-
-def load_bitcoin_data(time_interval, start_date, end_date, renew=False):
-    print("READING BITCOIN")
-    potential_path = "../Data/2018-Weighted/cache/" + "BITCOIN" + "(" + time_interval + ")" + ".csv"
-
-    if os.path.isfile(potential_path) and not renew:
-        # Read CACHED FILE
-        print(" - Cached File Found")
-        bitcoin_df = pd.read_csv(potential_path)
-        return bitcoin_df
-    print(" - Cached File NOT Found")
-
-    file_path = "../Data/bitcoin/Bitstamp_BTCUSD_2018_minute.csv"
-    print("     - reading", file_path)
-    bitcoin_data = pd.read_csv(file_path)
-
-    print("     - Filtering Between", start_date.date(), "and", end_date.date())
-    # bitcoin_data = bitcoin_data.sort_values(by='Date')
-    bitcoin_data['Date'] = pd.to_datetime(bitcoin_data['Date'])
-    bitcoin_data = bitcoin_data.loc[(bitcoin_data['Date'] >= start_date.replace(tzinfo=None))
-                                    & (bitcoin_data['Date'] < end_date.replace(tzinfo=None))]
-
-    print(" - Grouping")
-    grouped_df = group_bitcoindata(bitcoin_data, time_interval)
-
-    print(" - Writing")
-    grouped_df.to_csv(potential_path)
-    print(" - Bitcoin Data Cached in", potential_path)
-
-    print(" ! Reading Bitcoin Data DONE...")
-    return grouped_df
+    return sets
 
 
-# endregion
+def create_data_loaders(X_train, X_val, y_train, y_val, X_test, y_test, scaler):
+    # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
+
+    X_train_arr = scaler.fit_transform(X_train)
+    X_val_arr = scaler.transform(X_val)
+    X_test_arr = scaler.transform(X_test)
+
+    y_train_arr = scaler.fit_transform(y_train)
+    y_val_arr = scaler.transform(y_val)
+    y_test_arr = scaler.transform(y_test)
+
+    train_features = torch.Tensor(X_train_arr).to(DEVICE)
+    train_targets = torch.Tensor(y_train_arr).to(DEVICE)
+    val_features = torch.Tensor(X_val_arr).to(DEVICE)
+    val_targets = torch.Tensor(y_val_arr).to(DEVICE)
+    test_features = torch.Tensor(X_test_arr).to(DEVICE)
+    test_targets = torch.Tensor(y_test_arr).to(DEVICE)
+
+    train = TensorDataset(train_features, train_targets)
+    val = TensorDataset(val_features, val_targets)
+    test = TensorDataset(test_features, test_targets)
+
+    train_loader = DataLoader(train, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+    val_loader = DataLoader(val, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+    if BATCH_SIZE > len(val):
+        val_loader = DataLoader(val, batch_size=len(val), shuffle=False, drop_last=True)
+    test_loader = DataLoader(test, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+    test_loader_one = DataLoader(test, batch_size=1, shuffle=False, drop_last=True)
+
+    return train_loader, val_loader, test_loader, test_loader_one
+
 
 if __name__ == '__main__':
     # region Load_Data
@@ -197,103 +159,70 @@ if __name__ == '__main__':
     for df in dataframes:
         df_raw = pd.concat([df_raw, df], axis=1)
 
+    df_raw = df_raw.set_index('Date')
     print("DATA READY")
-    # endregion
 
-    # region Feature Extraction
-    print("EXTRACTING FEATURES")
-    df_result = time_difference(df_raw, "Close")
-    df_result = time_lag_features(df_result, FEATURES, N=WINDOW_SIZE)
-    print("TIME LAGGING FEATURES DONE")
+    if TIME_DIFFERENCE_ENABLE:
+        print("TIME DIFFERENCE ENABLED")
+        df_raw = time_differencing(df_raw)
 
-    bert_vector = []
-    if BERT_ENABLE:
-        print("ADDING BERT FEATURES")
-        for i in range(0, BERT_SIZE):
-            bert_vector.append("bert" + str(i))
-
-        df_bert = df_raw[bert_vector]
-        df_bert = df_bert.iloc[WINDOW_SIZE:, :]  # Compensate the time lag
-        df_result = pd.concat([df_result, df_bert], axis=1)
-
-        # df_bert = create_bert_feature(df_bert,WINDOW_SIZE)
-
+    df_result = feature_extration(df_raw)
     print("SPLITTING DATASET")
-    X_train, X_val, X_test, y_train, y_val, y_test = train_val_test_split(df_result, TO_PREDICT_LABEL, 0.05)
 
-    # endregion
+    sets = cross_validation_sets(df_result)
+    sets.reverse()
+    num_features = len(df_result.columns) - len(TO_PREDICT_LABELS)
 
-    # region Fixing loaders
-    # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
-    scaler = MinMaxScaler()
+    for (training_set, test_set) in sets:
+        # training set
+        X, y = feature_label_split(training_set, TO_PREDICT_LABELS)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=VAL_RATIO, shuffle=False)
+        # test set
+        X_test, y_test = feature_label_split(test_set, TO_PREDICT_LABELS)
+        scaler = MinMaxScaler()
+        train_loader, val_loader, test_loader, test_loader_one = \
+            create_data_loaders(X_train, X_val, y_train, y_val, X_test, y_test, scaler)
 
-    X_train_arr = scaler.fit_transform(X_train)
-    X_val_arr = scaler.transform(X_val)
-    X_test_arr = scaler.transform(X_test)
+        # region MODEL
+        input_dim = num_features
+        hidden_dim = 128
+        num_layers = 3
+        output_dim = 1
+        dropout = 0.2
 
-    y_train_arr = scaler.fit_transform(y_train)
-    y_val_arr = scaler.transform(y_val)
-    y_test_arr = scaler.transform(y_test)
+        Models = {}
+        try:
+            Models["LSTM"] = LSTM(input_dim, hidden_dim, num_layers, output_dim,
+                                  dropout, BATCH_SIZE).to(DEVICE)
+            Models["CNNLSTM"] = CNNLSTM(input_dim, hidden_dim, num_layers, output_dim,
+                                        dropout, BATCH_SIZE, BERT_SIZE, WINDOW_SIZE).to(DEVICE)
+            Models["DenseLSTM"] = DenseLSTM(input_dim, hidden_dim, num_layers, output_dim,
+                                            dropout, BATCH_SIZE, BERT_SIZE, WINDOW_SIZE).to(DEVICE)
+        except:
+            pass
 
-    train_features = torch.Tensor(X_train_arr).to(DEVICE)
-    train_targets = torch.Tensor(y_train_arr).to(DEVICE)
-    val_features = torch.Tensor(X_val_arr).to(DEVICE)
-    val_targets = torch.Tensor(y_val_arr).to(DEVICE)
-    test_features = torch.Tensor(X_test_arr).to(DEVICE)
-    test_targets = torch.Tensor(y_test_arr).to(DEVICE)
+        model = Models["LSTM"]
 
-    train = TensorDataset(train_features, train_targets)
-    val = TensorDataset(val_features, val_targets)
-    test = TensorDataset(test_features, test_targets)
+        # endregion
 
-    train_loader = DataLoader(train, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
-    val_loader = DataLoader(val, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
-    test_loader = DataLoader(test, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
-    test_loader_one = DataLoader(test, batch_size=1, shuffle=False, drop_last=True)
+        loss = nn.MSELoss()
+        optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
-    # endregion
+        opt = Trainer(model=model, loss_fn=loss, optimizer=optimizer, num_features=input_dim)
 
-    # region MODEL
-    input_dim = len(X_train.columns)
-    hidden_dim = 128
-    num_layers = 3
-    output_dim = 1
-    dropout = 0.2
+        print("SUMMARY")
 
-    Models = {}
-    try:
-        Models["LSTM"] = LSTM(input_dim, hidden_dim, num_layers, output_dim,
-                     dropout, BATCH_SIZE).to(DEVICE)
-        Models["CNNLSTM"] = CNNLSTM(input_dim, hidden_dim, num_layers, output_dim,
-                           dropout, BATCH_SIZE, BERT_SIZE, WINDOW_SIZE).to(DEVICE)
-        Models["DenseLSTM"] = DenseLSTM(input_dim, hidden_dim, num_layers, output_dim,
-                               dropout, BATCH_SIZE, BERT_SIZE, WINDOW_SIZE).to(DEVICE)
-    except:
-        pass
+        if BERT_ENABLE:
+            features = [x for x in FEATURES if not x.startswith('bert')]
+            features.append("BERT_VECTOR")
+        else:
+            features = FEATURES
 
-    model = Models["LSTM"]
+        print("- Features", features)
+        print("- TIME_INTERVAL", EPOCHS, "/ BATCH_SIZE", BATCH_SIZE)
+        print("- Epochs", EPOCHS, "/ LEARNING_RATE", LEARNING_RATE, "/ WEIGHT_DECAY", WEIGHT_DECAY)
+        print("- LSTM Details: ", "hidden_dim", hidden_dim, "/ num_layers", num_layers, "/ dropout", dropout)
 
-    # endregion
-
-    loss = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-
-    opt = Trainer(model=model, loss_fn=loss, optimizer=optimizer)
-
-    print("SUMMARY")
-
-    if BERT_ENABLE:
-        features = [x for x in FEATURES if not x.startswith('bert')]
-        features.append("BERT_VECTOR")
-    else:
-        features = FEATURES
-
-    print("- Features", features)
-    print("- TIME_INTERVAL", EPOCHS, "/ BATCH_SIZE", BATCH_SIZE)
-    print("- Epochs", EPOCHS, "/ LEARNING_RATE", LEARNING_RATE, "/ WEIGHT_DECAY", WEIGHT_DECAY)
-    print("- LSTM Details: ", "hidden_dim", hidden_dim, "/ num_layers", num_layers, "/ dropout", dropout)
-
-    print("STARTING TRAINING", features)
-    opt.train(train_loader, val_loader, batch_size=BATCH_SIZE, n_epochs=EPOCHS,
-              n_features=input_dim, test_loader_one=test_loader_one, X_test=X_test,
-              scaler=scaler)
+        print("STARTING TRAINING", features)
+        opt.train(train_loader, val_loader, n_epochs=EPOCHS, test_loader_one=test_loader_one,
+                  X_test=X_test,X_val = X_val,scaler=scaler)
