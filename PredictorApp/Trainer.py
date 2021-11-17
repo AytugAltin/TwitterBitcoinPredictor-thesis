@@ -12,7 +12,7 @@ TEST_EPOCH = EVAL_EPOCH
 
 
 class Trainer:
-    def __init__(self, model, loss_fn, optimizer, num_features, name, root, max_no_improvements=30):
+    def __init__(self, model, loss_fn, optimizer, num_features, name, root, max_no_improvements=15):
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer

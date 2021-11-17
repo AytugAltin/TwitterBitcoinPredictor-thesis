@@ -51,7 +51,9 @@ def calculate_metrics(df):
             'r2': r2_score(df.value, df.prediction)}
 
 
-def plot_predictions(df_result, title=""):
+def plot_predictions(df_result, title="",value="value",prediction="prediction"):
     plt.close()
-    df_result.plot(y=['value', 'prediction'], title=title)
+    df_result.plot(y=[value, prediction], title=title)
+    fig = plt.gcf()
     plt.show()
+    return fig
