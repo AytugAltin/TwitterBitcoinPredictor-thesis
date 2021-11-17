@@ -16,11 +16,12 @@ class LSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_dim).to(DEVICE)
 
         self.hidden_dim = hidden_dim
-        self.layer_dim = num_layers
         self.num_layers = num_layers
         self.dropout = dropout
-        self.batch_size = batch_size
+        self.input_dim = input_dim
+        self.output_dim = output_dim
 
+        self.batch_size = batch_size
 
         name = ''
         name += "(hidden=" + str(hidden_dim) + ")"
@@ -33,13 +34,23 @@ class LSTM(nn.Module):
     def get_name(self):
         return self.name
 
-    def reset_cell(self,batch_size):
+    def get_model_dict_info(self):
+        dict = {
+            "HiddenDim": self.hidden_dim,
+            "NumLayers": self.num_layers,
+            "InputDim": self.input_dim,
+            "Dropout": self.dropout,
+            "OutputDim": self.output_dim
+        }
+        return dict
+
+    def reset_cell(self, batch_size):
         self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE),
                             torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE))
 
     def forward(self, input_tensor):
         self.reset_cell(input_tensor.size(0))
-        out, (_) = self.lstm(input_tensor,self.hidden_cell)
+        out, (_) = self.lstm(input_tensor, self.hidden_cell)
 
         out = out[:, -1, :]
         out = out.to(DEVICE)

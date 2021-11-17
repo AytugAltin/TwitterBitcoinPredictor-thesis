@@ -119,6 +119,8 @@ def load_bitcoin_data(time_interval, start_date, end_date, renew=False):
     print(" - Writing")
     grouped_df.to_csv(potential_path)
     print(" - Bitcoin Data Cached in", potential_path)
+    grouped_df["Date"] = grouped_df.index
+    grouped_df = grouped_df.reset_index(drop=True)
 
     print(" ! Reading Bitcoin Data DONE...")
     return grouped_df

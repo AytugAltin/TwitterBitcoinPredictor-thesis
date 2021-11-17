@@ -59,6 +59,6 @@ if __name__ == '__main__':
     opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_features=input_size,
               test_loader_one=test_loader_one, X_test=X_test, scaler=scaler)
 
-    predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_size)
+    predictions, values = opt.evaluation_step(test_loader_one, batch_size=1, n_features=input_size)
 
 

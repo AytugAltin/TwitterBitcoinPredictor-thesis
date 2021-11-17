@@ -1,29 +1,33 @@
+import copy
 from pathlib import Path
 import numpy as np
 from Dataset import *
 from Device import DEVICE
 from Evaluate import evaluate_model, plot_predictions
-import colorama
-from colorama import Fore
+from logger import Logger
 
 LOG_EPOCH = 10
 EVAL_EPOCH = 10
-TEST_EPOCH = 100
+TEST_EPOCH = EVAL_EPOCH
 
 
 class Trainer:
-    def __init__(self, model, loss_fn, optimizer, num_features, max_no_improvements=100):
+    def __init__(self, model, loss_fn, optimizer, num_features, name, root, max_no_improvements=30):
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
-        self.train_losses = []
-        self.val_losses = []
         self.model_index = 0
         self.best_model_score = -2000
         self.num_features = num_features
         self.no_improvements = 0
         self.max_no_improvements = max_no_improvements
         self.minimal_loss = 100000
+        self.best_model = None
+        self.root = root
+        self.train_logger = Logger(root=root, name="Train_log-" + name)
+        self.val_logger = Logger(root=root, name="Val_log-" + name)
+        self.test_logger = Logger(root=root, name="Test_log-" + name)
+        self.epoch = 0
 
     def train_step(self, x, y):
         # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
@@ -70,55 +74,76 @@ class Trainer:
             self.no_improvements += 1
             return self.no_improvements == self.max_no_improvements
 
+    def save_logs(self):
+        self.val_logger.write_to_file()
+        self.train_logger.write_to_file()
+        self.test_logger.write_to_file()
+
     def train(self, train_loader, val_loader, n_epochs,
-              test_loader_one, X_test, X_val, scaler):
+              test_loader_one, X_test, X_val, X_train, scaler):
 
         for epoch in range(1, n_epochs + 1):
             # Train for the whole epoch
 
             # TRAINING
             training_loss = self.train_epoch(train_loader)
-            self.train_losses.append(training_loss)
+            self.train_logger.log(name="loss", index=epoch, value=training_loss)
 
             # VALIDATION
             validation_loss = self.validate_model(val_loader)
-            self.val_losses.append(validation_loss)
+            self.val_logger.log(name="loss", index=epoch, value=validation_loss)
 
             if epoch % EVAL_EPOCH == 0:
-                result_metrics = self.evaluate(test_loader_one=val_loader, batch_size=val_loader.batch_size,
-                                               n_features=self.num_features,
-                                               X_test=X_val, scaler=scaler)
+                result_metrics = self.evaluation_step(test_loader_one=val_loader, batch_size=val_loader.batch_size,
+                                                      n_features=self.num_features,
+                                                      X_test=X_val, scaler=scaler, model=self.model)
+
                 print(result_metrics)
                 print("best_model_score", self.best_model_score)
-                self.plot_predictions(test_loader_one=val_loader, batch_size=val_loader.batch_size,
-                                      n_features=self.num_features, X_test=X_val, scaler=scaler)
+
+                self.val_logger.log(name="mae", index=epoch, value=result_metrics["mae"])
+                self.val_logger.log(name="mse", index=epoch, value=result_metrics["mse"])
+                self.val_logger.log(name="rmse", index=epoch, value=result_metrics["rmse"])
+                self.val_logger.log(name="r2", index=epoch, value=result_metrics["r2"])
+
+                # if epoch % (EVAL_EPOCH*10) == 0:
+                #     self.plot_predictions(test_loader_one=val_loader, batch_size=val_loader.batch_size,
+                #                       n_features=self.num_features, X_test=X_val, scaler=scaler, model=self.model)
 
             if (epoch <= 50) | (epoch % LOG_EPOCH == 0):
                 print(f"[{epoch}/{n_epochs}] "
                       f"Training loss: {training_loss:.4f}\t "
                       f"Validation loss: {validation_loss:.4f}"
                       )
+                self.save_logs()
 
             if epoch % TEST_EPOCH == 0:
-                self.plot_predictions(test_loader_one=test_loader_one, batch_size=1, n_features=self.num_features,
-                                      X_test=X_test, scaler=scaler)
+                # self.plot_predictions(test_loader_one=test_loader_one, batch_size=1, n_features=self.num_features,
+                #                       X_test=X_test, scaler=scaler, model=self.best_model)
+
+                self.test_logger.log(name="mae", index=epoch, value=result_metrics["mae"])
+                self.test_logger.log(name="mse", index=epoch, value=result_metrics["mse"])
+                self.test_logger.log(name="rmse", index=epoch, value=result_metrics["rmse"])
+                self.test_logger.log(name="r2", index=epoch, value=result_metrics["r2"])
 
             if epoch > 100 and self.early_stop(validation_loss):
+                self.epoch = epoch
                 break
 
-    def evaluate(self, test_loader_one, batch_size, n_features, X_test, scaler):
-        df_result, result_metrics = evaluate_model(model=self.model, test_loader=test_loader_one, batch_size=batch_size
+    def evaluation_step(self, test_loader_one, batch_size, n_features, X_test, scaler, model):
+        df_result, result_metrics = evaluate_model(model=model, test_loader=test_loader_one, batch_size=batch_size
                                                    , n_features=n_features, X_test=X_test, scaler=scaler)
 
         if result_metrics["r2"] > self.best_model_score:
             self.best_model_score = result_metrics["r2"]
             self.no_improvements = 0
             self.save_model()
+            self.best_model = copy.deepcopy(self.model)
 
         return result_metrics
 
     def save_model(self):
-        model_dir = "Models/Saved/" + self.model.get_name()
+        model_dir = self.root + "models"
         Path(model_dir).mkdir(parents=True, exist_ok=True)
         model_path = model_dir + "/model-" + str(self.model_index)
         self.model_index += 1
@@ -127,8 +152,9 @@ class Trainer:
 
         torch.save(self.model.state_dict(), model_path)
 
-    def plot_predictions(self, test_loader_one, batch_size, n_features, X_test, scaler):
-        df_result, result_metrics = evaluate_model(model=self.model, test_loader=test_loader_one, batch_size=batch_size,
-                                                   n_features=n_features, X_test=X_test, scaler=scaler)
+    def plot_predictions(self, test_loader_one, batch_size, n_features, X_test, scaler, model, title=""):
+        df_result, result_metrics = evaluate_model(model=model, test_loader=test_loader_one, batch_size=batch_size,
 
-        plot_predictions(df_result)
+                                                   n_features=n_features, X_test=X_test, scaler=scaler)
+        title += "  /r2=" + str(round(result_metrics["r2"], 3))
+        plot_predictions(df_result, title=title)

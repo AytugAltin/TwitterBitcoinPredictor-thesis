@@ -47,10 +47,11 @@ def inverse_transform(scaler, df, columns):
 def calculate_metrics(df):
     return {'mae': mean_absolute_error(df.value, df.prediction),
             'rmse': mean_squared_error(df.value, df.prediction) ** 0.5,
+            'mse': mean_squared_error(df.value, df.prediction),
             'r2': r2_score(df.value, df.prediction)}
 
 
-def plot_predictions(df_result):
+def plot_predictions(df_result, title=""):
     plt.close()
-    df_result.plot(y=['value', 'prediction'])
+    df_result.plot(y=['value', 'prediction'], title=title)
     plt.show()
