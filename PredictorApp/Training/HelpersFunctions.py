@@ -7,6 +7,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from DataLoader import *
 from Device import DEVICE
 from Evaluate import evaluate_model, plot_predictions
+from sklearn.model_selection import train_test_split
 
 
 def time_differencing(df):
@@ -23,7 +24,7 @@ def time_differencing_reverse(df, zero_value):
     return df
 
 
-def feature_extration(df_raw, window_size,FEATURES,BERT_ENABLE,BERT_SIZE):
+def feature_extration(df_raw, window_size, FEATURES, BERT_ENABLE, BERT_SIZE):
     print("EXTRACTING FEATURES")
     df_result = time_lag_features(df_raw, FEATURES, N=window_size)
     print("TIME LAGGING FEATURES DONE")
@@ -86,7 +87,36 @@ def cross_validation_sets(df):
     return sets
 
 
-def create_data_loaders(X_train, X_val, y_train, y_val, X_test, y_test, scaler,BATCH_SIZE):
+# def cross_validation_sets(df):
+#     start_date = datetime.datetime(2018, 3, 8, 0, 0, 0, 0, datetime.timezone.utc)
+#
+#     end_dates = [datetime.datetime(2018, 8, 1, 0, 0, 0, 0, datetime.timezone.utc),
+#                  datetime.datetime(2018, 9, 1, 0, 0, 0, 0, datetime.timezone.utc),
+#                  datetime.datetime(2018, 10, 1, 0, 0, 0, 0, datetime.timezone.utc),
+#                  datetime.datetime(2018, 11, 4, 0, 0, 0, 0, datetime.timezone.utc),
+#                  ]
+#
+#     df.index = pd.to_datetime(df.index)
+#
+#     sets = []
+#     set_index = 1
+#     while len(end_dates) > 0:
+#         end_date = end_dates.pop(0)
+#
+#         set = df.loc[(df.index >= start_date.replace(tzinfo=None))
+#                      & (df.index < end_date.replace(tzinfo=None))]
+#
+#         train, test = train_test_split(set, test_size=0.05)
+#         train, val = train_test_split(train, test_size=0.05)
+#
+#         sets.append((train, val, test, set_index))
+#
+#         set_index += 1
+#
+#     return sets
+
+
+def create_data_loaders(X_train, X_val, y_train, y_val, X_test, y_test, scaler, BATCH_SIZE):
     # from https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
 
     X_train_arr = scaler.fit_transform(X_train)
@@ -133,14 +163,19 @@ def get_result_df(dict):
     return df_r
 
 
+def create_folder(root):
+    if not os.path.exists(root):
+        os.makedirs(root)
+
+
 def final_results(trainer, train_loader, val_loader, test_loader,
                   X_test, X_val, X_train, scaler, root,
                   time_interval, window_size, set_index,
                   zero_value,
-                  TIME_DIFFERENCE_ENABLE,LEARNING_RATE,WEIGHT_DECAY,
-                  BATCH_SIZE,FEATURES,BERT_ENABLE,MODEL_NAME
+                  TIME_DIFFERENCE_ENABLE, LEARNING_RATE, WEIGHT_DECAY,
+                  BATCH_SIZE, FEATURES, BERT_ENABLE, MODEL_NAME
                   ):
-    df_result_train, result_metrics_train = evaluate_model(model=trainer.best_model, test_loader=train_loader,
+    df_result_train, result_metrics_train = evaluate_model(model=trainer.best_model_mse, test_loader=train_loader,
                                                            batch_size=train_loader.batch_size,
                                                            n_features=trainer.num_features, X_test=X_train,
                                                            scaler=scaler)
@@ -148,7 +183,7 @@ def final_results(trainer, train_loader, val_loader, test_loader,
     df_result_train = time_differencing_reverse(df_result_train, zero_value)
     zero_value = df_result_train["value_real"][-1]
 
-    df_result_val, result_metrics_val = evaluate_model(model=trainer.best_model, test_loader=val_loader,
+    df_result_val, result_metrics_val = evaluate_model(model=trainer.best_model_mse, test_loader=val_loader,
                                                        batch_size=val_loader.batch_size,
                                                        n_features=trainer.num_features, X_test=X_val,
                                                        scaler=scaler)
@@ -156,7 +191,7 @@ def final_results(trainer, train_loader, val_loader, test_loader,
     df_result_val = time_differencing_reverse(df_result_val, zero_value)
     zero_value = df_result_val["value_real"][-1]
 
-    df_result_test, result_metrics_test = evaluate_model(model=trainer.best_model, test_loader=test_loader,
+    df_result_test, result_metrics_test = evaluate_model(model=trainer.best_model_mse, test_loader=test_loader,
                                                          batch_size=test_loader.batch_size,
                                                          n_features=trainer.num_features, X_test=X_test,
                                                          scaler=scaler)
@@ -170,22 +205,26 @@ def final_results(trainer, train_loader, val_loader, test_loader,
 
     title = "TI=" + str(time_interval) + "    /WS=" + str(window_size) + "  /SET=" + str(set_index)
 
-    # trainer.plot_predictions(test_loader_one=test_loader, batch_size=1, n_features=trainer.num_features,
-    #                          X_test=X_test, scaler=scaler, model=trainer.best_model, title=title)
-
     title += "\n" + "R2=" + str(round(result_metrics_test["r2"], 5)) + " RMSE=" + str(
         round(result_metrics_test["rmse"]))
-    if TIME_DIFFERENCE_ENABLE:
-        fig = plot_predictions(df_result_test, title=title, value="value_real", prediction="prediction_real")
 
-    else:
-        fig = plot_predictions(df_result_test, title=title)
+    print("TRAIN RESULTS:", result_metrics_train)
+    print("VAL RESULTS:", result_metrics_val)
+    print("TEST RESULTS:", result_metrics_test)
 
     rootplot = "../Logs/Plots/"
-    if not os.path.exists(root):
-        os.makedirs(rootplot)
+    create_folder(rootplot)
 
-    fig.savefig(rootplot+details+"-plot.png")
+    plot_predictions(df_result_train, title="Training")
+    plot_predictions(df_result_val, title="Validation")
+
+    if TIME_DIFFERENCE_ENABLE:
+        fig = plot_predictions(df_result_test, title=title, value="value_real", prediction="prediction_real")
+        fig.savefig(rootplot + details + "-plot_absolute.png")
+
+    fig = plot_predictions(df_result_test, title=title)
+
+    fig.savefig(rootplot + details + "-plot.png")
 
     dict = {
         "LearningRate": LEARNING_RATE,
@@ -224,8 +263,7 @@ def final_results(trainer, train_loader, val_loader, test_loader,
 
         "ModelName": MODEL_NAME,
     }
-    model_dict = trainer.best_model.get_model_dict_info()
+    model_dict = trainer.best_model_r2.get_model_dict_info()
     dict.update(model_dict)
     dict_to_file(dict=dict, path=root + "-SUMMARY" + ".csv")
     return get_result_df(dict)
-

@@ -6,11 +6,11 @@ from Device import DEVICE
 
 class DenseLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout, batch_size,
-                 BERT_size, windows_size):
+                 BERT_size,dense_out=10):
         super(DenseLSTM, self).__init__()
 
         self.BERT_input_size = BERT_size
-        dense_out = 10
+        self.dense_out = dense_out
 
         self.fc_bert = nn.Linear(self.BERT_input_size, dense_out).to(DEVICE)
 
@@ -21,12 +21,15 @@ class DenseLSTM(nn.Module):
         self.lstm.to(DEVICE)
 
         self.fc = nn.Linear(hidden_dim, output_dim).to(DEVICE)
+        self.new_epoch = True
 
         self.hidden_dim = hidden_dim
         self.layer_dim = num_layers
         self.num_layers = num_layers
         self.dropout = dropout
         self.batch_size = batch_size
+        self.output_dim = output_dim
+        self.input_dim = input_dim
 
         name = ''
         name += "(hidden=" + str(hidden_dim) + ")"
@@ -39,11 +42,22 @@ class DenseLSTM(nn.Module):
     def get_name(self):
         return self.name
 
+    def get_model_dict_info(self):
+        dict = {
+            "HiddenDim": self.hidden_dim,
+            "NumLayers": self.num_layers,
+            "InputDim": self.input_dim,
+            "Dropout": self.dropout,
+            "OutputDim": self.output_dim
+        }
+        return dict
+
     def reset_cell(self, batch_size):
         self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE),
                             torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE))
 
     def forward(self, input_tensor):
+        self.lstm.flatten_parameters()
         batch_size = input_tensor.size(0)
         bert = input_tensor[:, :, :self.BERT_input_size]
         non_bert = input_tensor[:, :, :-self.BERT_input_size]

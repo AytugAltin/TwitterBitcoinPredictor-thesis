@@ -4,9 +4,9 @@ import torch.nn as nn
 from Device import DEVICE
 
 
-class LSTM(nn.Module):
+class LSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout, batch_size):
-        super(LSTM, self).__init__()
+        super(LSTMModel, self).__init__()
 
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim,
                             dropout=dropout, num_layers=num_layers, batch_first=True)
@@ -20,7 +20,7 @@ class LSTM(nn.Module):
         self.dropout = dropout
         self.input_dim = input_dim
         self.output_dim = output_dim
-
+        self.new_epoch = True
         self.batch_size = batch_size
 
         name = ''
@@ -49,6 +49,7 @@ class LSTM(nn.Module):
                             torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(DEVICE))
 
     def forward(self, input_tensor):
+        self.lstm.flatten_parameters()
         self.reset_cell(input_tensor.size(0))
         out, (_) = self.lstm(input_tensor, self.hidden_cell)
 

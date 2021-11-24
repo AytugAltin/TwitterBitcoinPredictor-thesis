@@ -5,7 +5,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from Device import DEVICE
 from FeatureExtraction import *
 from Models.LSTM import LSTMModel
-from Trainer import Trainer
+from Training.Trainer import Trainer
 
 if __name__ == '__main__':
     dataset = CombinedDataset(csv_file="Data/2018tweets/Objects/(60Min)bert.csv")

@@ -25,7 +25,7 @@ class CNNLSTM(nn.Module):
         self.num_layers = num_layers
         self.dropout = dropout
         self.batch_size = batch_size
-
+        self.new_epoch = True
 
         name = ''
         name += "(hidden=" + str(hidden_dim) + ")"
