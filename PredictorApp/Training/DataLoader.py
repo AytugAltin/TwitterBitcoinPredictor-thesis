@@ -1,5 +1,6 @@
 import os
-from DataProcessing.DataGrouper import group_tweetsdata, group_volumedata, group_bitcoindata
+from DataProcessing.DataGrouper import group_tweetsdata, group_volumedata, group_bitcoindata, group_sentiment_volume, \
+    group_sentiment_values
 from FeatureExtraction import *
 
 
@@ -38,6 +39,35 @@ def load_tweet_data(time_interval, files, renew=False):
 
     print(" ! Reading Tweets Data DONE...")
     return final_df
+
+
+def load_compound_data(time_interval, files, renew=False):
+    print("READING COMPOUND")
+    potential_path = "../Data/2018-Weighted/cache/" + "COMPOUND" + "(" + time_interval + ")" + ".csv"
+
+    if os.path.isfile(potential_path) and not renew:
+        # Read CACHED FILE
+        print(" - Cached File Found")
+        df = pd.read_csv(potential_path)
+        print(" - LOADED", potential_path)
+        return df
+
+    print(" - NO Cached File Found")
+
+    root_path = "../Data/2018-Weighted/sentiment_values/"
+    tweets_data = pd.DataFrame()
+    for file_path in files:
+        print("     - reading", file_path)
+        temp = pd.read_csv(root_path + file_path)
+        tweets_data = tweets_data.append(temp)
+
+    print(" - Grouping")
+    grouped_df = group_sentiment_values(tweets_data, time_interval)
+    grouped_df = grouped_df[["sent_compound"]]
+    print(" - Writing")
+    grouped_df.to_csv(potential_path)
+
+    return grouped_df
 
 
 def fix_bert(path):
@@ -89,6 +119,34 @@ def load_volume_data(time_interval, start_date, end_date, renew=False):
     print(" - Volume Data Cached in", potential_path)
 
     print(" ! Reading Volume Data DONE...")
+    return grouped_df
+
+
+def load_sentiment_volume_data(time_interval, files, renew=False):
+    print("READING SENTIMENT VOLUME")
+    potential_path = "../Data/2018-Weighted/cache/" + "SENT_VOLUME" + "(" + time_interval + ")" + ".csv"
+
+    if os.path.isfile(potential_path) and not renew:
+        # Read CACHED FILE
+        print(" - Cached File Found")
+        df = pd.read_csv(potential_path)
+        print(" - LOADED", potential_path)
+        return df
+
+    print(" - NO Cached File Found")
+
+    root_path = "../Data/2018-Weighted/sentiment_count/"
+    sent_data = pd.DataFrame()
+    for file_path in files:
+        print("     - reading", file_path)
+        temp = pd.read_csv(root_path + file_path)
+        sent_data = sent_data.append(temp)
+
+    print(" - Grouping")
+    grouped_df = group_sentiment_volume(sent_data, time_interval)
+    print(" - Writing")
+    grouped_df.to_csv(potential_path)
+    print(" - SENTIMENT VOLUME Data Cached in", potential_path)
     return grouped_df
 
 

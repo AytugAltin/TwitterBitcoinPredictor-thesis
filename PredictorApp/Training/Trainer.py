@@ -9,8 +9,8 @@ from logger import Logger
 LOG_EPOCH = 10
 EVAL_EPOCH = 10
 TEST_EPOCH = 10
-PLOT_TEST = True
-
+PLOT_TEST = False
+# PLOT_TEST = True
 
 class Trainer:
     def __init__(self, model, loss_fn, optimizer, num_features, name, root, max_no_improvements):
@@ -145,13 +145,13 @@ class Trainer:
 
         if result_metrics["r2"] > self.best_model_r2_score:
             self.best_model_r2_score = result_metrics["r2"]
-            self.no_improvements = 0
+            # self.no_improvements = 0
             self.save_model()
             self.best_model_r2 = copy.deepcopy(self.model)
 
         if result_metrics["mse"] < self.best_model_mse_score:
             self.best_model_mse_score = result_metrics["mse"]
-            self.no_improvements = 0
+            # self.no_improvements = 0
             self.save_model()
             self.best_model_mse = copy.deepcopy(self.model)
 
@@ -165,7 +165,7 @@ class Trainer:
         if self.model_index % 10 == 0:
             self.model_index = 0
 
-        torch.save(self.model.state_dict(), model_path)
+        # torch.save(self.model.state_dict(), model_path)
 
     def plot_predictions(self, test_loader, batch_size, n_features, X_test, scaler, model, title=""):
         df_result, result_metrics = evaluate_model(model=model, test_loader=test_loader, batch_size=batch_size,

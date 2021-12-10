@@ -17,8 +17,7 @@ class EXPMODEL2(nn.Module):
 
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
                             num_layers=num_layers, batch_first=True, dropout=dropout)
-        self.fc_1 = nn.Linear(self.hidden_dim, 64)
-        self.fc_2 = nn.Linear(64, self.output_dim)
+        self.fc_1 = nn.Linear(self.hidden_dim, self.output_dim)
 
         self.relu = nn.ReLU()
         self.new_epoch = True
@@ -55,8 +54,7 @@ class EXPMODEL2(nn.Module):
 
         output, (self.h, self.c) = self.lstm(input_tensor, (h_0, c_0))
         out = output.view(-1, self.hidden_dim)
-        out = self.relu(out)
+        # out = self.relu(out)
         out = self.fc_1(out)
-        out = self.relu(out)
-        out = self.fc_2(out)
+
         return out

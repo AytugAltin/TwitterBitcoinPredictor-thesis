@@ -4,7 +4,7 @@ import datetime
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
-from DataLoader import *
+from Training.DataLoader import *
 from Device import DEVICE
 from Evaluate import evaluate_model, plot_predictions
 from sklearn.model_selection import train_test_split
@@ -215,8 +215,8 @@ def final_results(trainer, train_loader, val_loader, test_loader,
     rootplot = "../Logs/Plots/"
     create_folder(rootplot)
 
-    plot_predictions(df_result_train, title="Training")
-    plot_predictions(df_result_val, title="Validation")
+    # plot_predictions(df_result_train, title="Training")
+    # plot_predictions(df_result_val, title="Validation")
 
     if TIME_DIFFERENCE_ENABLE:
         fig = plot_predictions(df_result_test, title=title, value="value_real", prediction="prediction_real")

@@ -49,6 +49,7 @@ def multiply_row(row, multiplyer):
     row["sent_neg"] = row["sent_neg"] * multiplyer
     row["sent_neu"] = row["sent_neu"] * multiplyer
     row["sent_pos"] = row["sent_pos"] * multiplyer
+    row["sent_compound"] = row["sent_compound"] * multiplyer
 
     try:
         row["bert"] = row["bert"].strip()
@@ -69,6 +70,7 @@ def divide_row(row, divider):
         row["sent_neg"] = row["sent_neg"] / divider
         row["sent_neu"] = row["sent_neu"] / divider
         row["sent_pos"] = row["sent_pos"] / divider
+        row["sent_compound"] = row["sent_compound"] / divider
     except:
         pass
 
@@ -112,6 +114,49 @@ def group_tweetsdata(tweets, time_interval, bot_filtering=True):
     grouped_data = grouped_data.apply(lambda row: divide_row(row, row["weight"]), axis=1)
 
     return grouped_data
+
+def group_sentiment_values(tweets, time_interval, bot_filtering=True):
+    data = tweets
+    data = data.sort_values(by='date')
+
+    data = convert_to_datetime(data, "date")
+    data['date'] = data["date"].dt.tz_localize(None)
+    data = data.set_index("date")
+
+    data = data.apply(lambda row: multiply_row(row, row["weight"]), axis=1)
+
+    aggregations = {
+        'sent_neg': 'sum',
+        'sent_neu': 'sum',
+        'sent_pos': 'sum',
+        'sent_compound': 'sum',
+        "count": 'sum',
+        "weight": 'sum'
+    }
+    grouped_data = data.groupby(pd.Grouper(freq=time_interval)).agg(aggregations)
+
+    grouped_data = grouped_data.apply(lambda row: divide_row(row, row["weight"]), axis=1)
+
+    return grouped_data
+
+def group_sentiment_volume(tweets, time_interval, bot_filtering=True):
+    data = tweets
+    data = data.sort_values(by='date')
+
+    data = convert_to_datetime(data, "date")
+    data['date'] = data["date"].dt.tz_localize(None)
+    data = data.set_index("date")
+
+    aggregations = {
+        'count_neg': 'sum',
+        'count_neu': 'sum',
+        'count_pos': 'sum',
+    }
+    grouped_data = data.groupby(pd.Grouper(freq=time_interval)).agg(aggregations)
+
+
+    return grouped_data
+
 
 
 def group_volumedata(volume_data, time_interval):

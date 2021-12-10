@@ -87,6 +87,93 @@ def pre_group_data(files, time_interval):
         df_concat = pd.concat(chunk_list)
         df_concat.to_csv("../Data/2018-Weighted/grouped/" + file + "(" + time_interval + ")" ".csv")
 
+def pre_group_sentiment_data(files, time_interval):
+    print("pre_group_sentiment_data")
+    root_path = "../Data/2018-Weighted/classed/"
+
+    chunksize = 100000
+
+    for file in files:
+        try:
+            df_chunk = pd.read_csv(root_path + file + ".csv", lineterminator="\n", chunksize=chunksize)
+        except:
+            df_chunk = pd.read_csv(root_path + file + ".csv", sep=";", chunksize=chunksize)
+
+        t0 = time.time()
+        index = 0
+        chunk_list = []
+        for chunk in df_chunk:
+            print("group_sentimentdata", chunk.shape, " time: ", (time.time() - t0))
+
+            new_columns = [i.strip() for i in chunk.columns]
+            chunk.columns = new_columns
+
+            chunk["weight"] = chunk["user_followers_count"] + 1
+            chunk["count"] = 1
+
+            chunk["sent_compound"] = chunk["sent_compound"].astype(str)
+            chunk["sent_compound"] = chunk["sent_compound"].apply(lambda x: x.strip())
+            chunk["sent_compound"] = chunk["sent_compound"].apply(pd.to_numeric)
+
+            chunk_grouped = group_sentiment_values(chunk, time_interval)
+
+            chunk_list.append(chunk_grouped)
+
+            print("shape", chunk.shape, " index", index, " time: ", (time.time() - t0))
+            index = index + 1
+
+        print("Written", file)
+        df_concat = pd.concat(chunk_list)
+        df_concat.to_csv("../Data/2018-Weighted/sentiment_values/" + file + "(" + time_interval + ")" ".csv")
+
+
+def sentiment_count(files, time_interval):
+    print("sentiment_count")
+    root_path = "../Data/2018-Weighted/classed/"
+
+    chunksize = 100000
+
+    for file in files:
+        try:
+            df_chunk = pd.read_csv(root_path + file + ".csv", lineterminator="\n", chunksize=chunksize)
+        except:
+            df_chunk = pd.read_csv(root_path + file + ".csv", sep=";", chunksize=chunksize)
+
+        t0 = time.time()
+        index = 0
+        chunk_list = []
+        for chunk in df_chunk:
+            print("group_tweetsdata", chunk.shape, " time: ", (time.time() - t0))
+
+            new_columns = [i.strip() for i in chunk.columns]
+            chunk.columns = new_columns
+
+            chunk["weight"] = chunk["user_followers_count"] + 1
+            chunk["count"] = 1
+
+            chunk["count_neg"] = 0
+            chunk["count_neu"] = 0
+            chunk["count_pos"] = 0
+
+            chunk["sent_compound"] = chunk["sent_compound"].astype(str)
+            chunk["sent_compound"] = chunk["sent_compound"].apply(lambda x: x.strip())
+            chunk["sent_compound"] = chunk["sent_compound"].apply(pd.to_numeric)
+
+            chunk.loc[chunk['sent_compound'] >= 0.05, 'count_pos'] = 1
+            chunk.loc[chunk['sent_compound'] <= -0.05, 'count_neg'] = 1
+            chunk.loc[(chunk['count_pos'] == 0) & (chunk['count_neg'] == 0), 'count_neu'] = 1
+
+            chunk_grouped = group_sentiment_volume(chunk, time_interval)
+
+            chunk_list.append(chunk_grouped)
+
+            print("shape", chunk.shape, " index", index, " time: ", (time.time() - t0))
+            index = index + 1
+
+        print("Written", index, file)
+        df_concat = pd.concat(chunk_list)
+        df_concat.to_csv("../Data/2018-Weighted/sentiment_count/" + file + "(" + time_interval + ")" ".csv")
+
 
 if __name__ == '__main__':
     # files = [
@@ -110,13 +197,17 @@ if __name__ == '__main__':
     #
     # vec_tweets(files)
 
+
+
     files = [
         "03 2018", "04 2018",
-        "05 2018", "06 2018", "07 2018",
-        "08 2018", "09 2018", "10 2018",
-        "11 2018"
+        "05 2018", "06 2018",
+        "07 2018",
+        # "08 2018", "09 2018", "10 2018",
+        # "11 2018"
     ]
+    files.reverse()
 
-    pre_group_data(files, "1Min")
+    pre_group_sentiment_data(files, "1Min")
 
     # todo for the 6th month

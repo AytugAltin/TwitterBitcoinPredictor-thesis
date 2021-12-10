@@ -8,6 +8,7 @@ from Device import DEVICE
 class EXPMODEL(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout, batch_size):
         super(EXPMODEL, self).__init__()
+        self.name = "EXPMODEL"
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.dropout = dropout
@@ -16,12 +17,10 @@ class EXPMODEL(nn.Module):
         self.batch_size = batch_size
 
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
-                            num_layers=num_layers, batch_first=True,dropout=dropout)
-        self.fc_1 = nn.Linear(self.hidden_dim, 64)
-        self.fc_2 = nn.Linear(64, self.output_dim)
+                            num_layers=num_layers, batch_first=True, dropout=dropout)
+        self.fc_1 = nn.Linear(self.hidden_dim, self.output_dim)
         self.new_epoch = True
         self.relu = nn.ReLU()
-
 
     def get_name(self):
         return "name"
@@ -50,7 +49,6 @@ class EXPMODEL(nn.Module):
         out = output.view(-1, self.hidden_dim)
         out = self.relu(out)
         out = self.fc_1(out)
-        out = self.relu(out)
-        out = self.fc_2(out)
+        # out = self.relu(out)
+        # out = self.fc_2(out)
         return out
-
