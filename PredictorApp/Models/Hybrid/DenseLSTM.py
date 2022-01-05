@@ -6,7 +6,7 @@ from Device import DEVICE
 
 class DenseLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout, batch_size,
-                 BERT_size,dense_out=10):
+                 BERT_size, dense_out=10):
         super(DenseLSTM, self).__init__()
 
         self.BERT_input_size = BERT_size
@@ -14,8 +14,8 @@ class DenseLSTM(nn.Module):
 
         self.fc_bert = nn.Linear(self.BERT_input_size, dense_out).to(DEVICE)
 
-        input_dim = int(input_dim - self.BERT_input_size + dense_out)
-        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim,
+        lstm_input_dim = int(input_dim + dense_out)
+        self.lstm = nn.LSTM(input_size=lstm_input_dim, hidden_size=hidden_dim,
                             dropout=dropout, num_layers=num_layers, batch_first=True)
 
         self.lstm.to(DEVICE)
@@ -29,12 +29,14 @@ class DenseLSTM(nn.Module):
         self.dropout = dropout
         self.batch_size = batch_size
         self.output_dim = output_dim
-        self.input_dim = input_dim
+        self.input_dim = input_dim + BERT_size
 
         name = ''
         name += "(hidden=" + str(hidden_dim) + ")"
         name += "(layer=" + str(num_layers) + ")"
-        name += "(input=" + str(input_dim) + ")"
+        name += "(input=" + str(self.input_dim) + ")"
+        name += "(lstm_input=" + str(lstm_input_dim) + ")"
+        name += "(dense_out=" + str(dense_out) + ")"
         name += "(dropout=" + str(dropout) + ")"
         name += "(output=" + str(output_dim) + ")"
         self.name = name

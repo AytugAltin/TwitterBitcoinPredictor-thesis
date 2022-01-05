@@ -9,8 +9,10 @@ from Training.Main import train_main
 from Device import DEVICE
 
 TIME_INTERVALS = [
-    "10Min", "30Min", "1H", "2H",
-    "3H", "6H", "12H",
+    # "10Min", "30Min", "1H", "2H",
+    # "3H",
+    "6H",
+    "12H",
     "24H"]
 BATCH_SIZE = 64
 BERT_ENABLE = False
@@ -30,9 +32,9 @@ WINDOW_SIZES = [
     100
 ]
 SETS = [
-    1,
-    2,
-    3,
+    # 1,
+    # 2,
+    # 3,
     4
 ]
 
@@ -48,6 +50,7 @@ FEATURES = [
     # 'count_neg',
     # 'count_neu',
     # 'count_pos',
+    "count",
     'Close',
     # "High",
     # "Low",

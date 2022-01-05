@@ -40,7 +40,8 @@ BERT_SIZE = 768
 
 FEATURES = [
     # 'Volume',
-    # 'tweet_vol',
+    # 'tweet_vol',  # unfiltered
+    # 'count',      # filtered
     # 'sent_neg',
     # 'sent_neu',
     # 'sent_pos',

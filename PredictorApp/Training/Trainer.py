@@ -10,7 +10,7 @@ LOG_EPOCH = 10
 EVAL_EPOCH = 10
 TEST_EPOCH = 10
 PLOT_TEST = False
-# PLOT_TEST = True
+PLOT_TEST = True
 
 class Trainer:
     def __init__(self, model, loss_fn, optimizer, num_features, name, root, max_no_improvements):

@@ -9,9 +9,10 @@ from Training.Main import train_main
 from Device import DEVICE
 
 TIME_INTERVALS = [
-    "10Min", "30Min", "1H", "2H",
-    "3H", "6H", "12H",
-    "24H"
+    # "10Min", "30Min", "1H",
+    "2H",
+    # "3H", "6H", "12H",
+    # "24H"
 ]
 BATCH_SIZE = 64
 BERT_ENABLE = False
@@ -26,14 +27,14 @@ WINDOW_SIZES = [
     2,
     5,
     10,
-    25,
-    50,
-    100
+    # 25,
+    # 50,
+    # 100
 ]
 SETS = [
-    1,
-    2,
-    3,
+    # 1,
+    # 2,
+    # 3,
     4
 ]
 
@@ -50,7 +51,7 @@ TO_PREDICT_LABELS = ["Close"]
 TEST_RATIO = 0.05
 VAL_RATIO = 0.1
 
-HIDDEN_DIM = 128
+HIDDEN_DIM = 64
 NUM_LAYERS = 3
 DROPOUT = 0.2
 
