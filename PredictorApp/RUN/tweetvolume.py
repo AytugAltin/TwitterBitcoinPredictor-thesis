@@ -9,9 +9,11 @@ from Training.Main import train_main
 from Device import DEVICE
 
 TIME_INTERVALS = [
-    "10Min", "30Min", "1H", "2H",
-    "3H", "6H", "12H",
-    "24H"]
+    # "10Min", "30Min", "1H", "2H",
+    # "3H", "6H",
+    "12H",
+    # "24H"
+]
 BATCH_SIZE = 64
 BERT_ENABLE = False
 EPOCHS = 1000
@@ -25,14 +27,14 @@ WINDOW_SIZES = [
     2,
     5,
     10,
-    25,
-    50,
-    100
+    # 25,
+    # 50,
+    # 100
 ]
 SETS = [
-    1,
-    2,
-    3,
+    # 1,
+    # 2,
+    # 3,
     4
 ]
 
@@ -40,8 +42,8 @@ BERT_SIZE = 768
 
 FEATURES = [
     # 'Volume',
-    'tweet_vol',  # unfiltered
-    # 'count',      # filtered
+    # 'tweet_vol',  # unfiltered
+    'count',      # filtered
     # 'sent_neg',
     # 'sent_neu',
     # 'sent_pos',
