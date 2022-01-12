@@ -14,4 +14,4 @@ Furthermore, tweet volume appears to increase the correlation with bitcoin's pri
 Our results show that by increasing the time intervals that the features represent, the correlation with bitcoin's price increases. Features representing larger time intervals have a higher chance of including data that has a higher correlation to bitcoin's price compared to features representing smaller time intervals.
 
 # Twitter Data
-Twitter data used in this thesis can be found in this repository under PredictorApp/Data/2018-Weighted/unprocessed/
+Twitter data used in this thesis can be found in this repository under DATA/
